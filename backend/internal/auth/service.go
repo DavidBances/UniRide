@@ -69,14 +69,20 @@ type claims struct {
 	jwt.RegisteredClaims
 }
 
+// UserRepository defines the contract for user data operations required by the auth service.
+type UserRepository interface {
+	Create(ctx context.Context, params users.CreateUserParams) (users.User, error)
+	FindByEmail(ctx context.Context, email string) (users.User, error)
+}
+
 // Service handles authentication business logic.
 type Service struct {
-	userRepository *users.Repository
+	userRepository UserRepository
 	jwtSecret      string
 }
 
 // NewService creates an authentication service.
-func NewService(userRepository *users.Repository, jwtSecret string) *Service {
+func NewService(userRepository UserRepository, jwtSecret string) *Service {
 	return &Service{
 		userRepository: userRepository,
 		jwtSecret:      jwtSecret,
