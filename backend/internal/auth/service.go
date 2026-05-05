@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/mail"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -48,6 +50,7 @@ type AuthenticatedUser struct {
 	ID       int64
 	Username string
 	Email    string
+	Token    string
 }
 
 // RegisteredUser is returned after a successful registration.
@@ -58,15 +61,25 @@ type RegisteredUser struct {
 	CreatedAt time.Time
 }
 
+// claims holds the JWT token payload.
+type claims struct {
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	jwt.RegisteredClaims
+}
+
 // Service handles authentication business logic.
 type Service struct {
 	userRepository *users.Repository
+	jwtSecret      string
 }
 
 // NewService creates an authentication service.
-func NewService(userRepository *users.Repository) *Service {
+func NewService(userRepository *users.Repository, jwtSecret string) *Service {
 	return &Service{
 		userRepository: userRepository,
+		jwtSecret:      jwtSecret,
 	}
 }
 
@@ -136,11 +149,36 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (AuthenticatedUse
 		return AuthenticatedUser{}, ErrInvalidCredentials
 	}
 
+	token, err := s.generateToken(user.ID, user.Username, user.Email)
+	if err != nil {
+		return AuthenticatedUser{}, fmt.Errorf("failed to generate token: %w", err)
+	}
+
 	return AuthenticatedUser{
 		ID:       user.ID,
 		Username: user.Username,
 		Email:    user.Email,
+		Token:    token,
 	}, nil
+}
+
+func (s *Service) generateToken(userID int64, username, email string) (string, error) {
+	now := time.Now().UTC()
+	c := claims{
+		UserID:   userID,
+		Username: username,
+		Email:    email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatInt(userID, 10),
+			Issuer:    "UniRide",
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
+	return token.SignedString([]byte(s.jwtSecret))
 }
 
 func normalizeEmail(email string) string {
