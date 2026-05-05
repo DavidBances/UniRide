@@ -5,16 +5,19 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/mail"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -32,6 +35,71 @@ type registerRequest struct {
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type authClaims struct {
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+func generateAuthToken(secret string, userID int64, username, email string) (string, error) {
+	now := time.Now().UTC()
+	claims := authClaims{
+		UserID:   userID,
+		Username: username,
+		Email:    email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatInt(userID, 10),
+			Issuer:    "UniRide",
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func authMiddleware(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authorizationHeader := strings.TrimSpace(c.GetHeader("Authorization"))
+		if authorizationHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+			return
+		}
+
+		parts := strings.SplitN(authorizationHeader, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			return
+		}
+
+		claims := &authClaims{}
+		token, err := jwt.ParseWithClaims(
+			strings.TrimSpace(parts[1]),
+			claims,
+			func(token *jwt.Token) (any, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %T", token.Method)
+				}
+
+				return []byte(secret), nil
+			},
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		)
+		if err != nil || token == nil || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		c.Set("authUserID", claims.UserID)
+		c.Set("authUsername", claims.Username)
+		c.Set("authEmail", claims.Email)
+		c.Next()
+	}
 }
 
 func main() {
@@ -76,7 +144,7 @@ func main() {
 	api.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
-	api.POST("/login", func(c *gin.Context) {
+	loginHandler := func(c *gin.Context) {
 		var req loginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
@@ -125,12 +193,36 @@ func main() {
 			return
 		}
 
+		token, err := generateAuthToken(cfg.JWTSecret, userID, username, req.Email)
+		if err != nil {
+			logger.Error("failed to generate auth token", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to login"})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Login exitoso",
+			"token": token,
 			"user": gin.H{
 				"id":       userID,
 				"username": username,
 				"email":    req.Email,
+			},
+		})
+	}
+	auth := r.Group("/auth")
+	auth.POST("/login", loginHandler)
+	api.POST("/login", loginHandler)
+	privateAPI := r.Group("/api/private", authMiddleware(cfg.JWTSecret))
+	privateAPI.GET("/me", func(c *gin.Context) {
+		userID := c.GetInt64("authUserID")
+		username, _ := c.Get("authUsername")
+		email, _ := c.Get("authEmail")
+
+		c.JSON(http.StatusOK, gin.H{
+			"user": gin.H{
+				"id":       userID,
+				"username": username,
+				"email":    email,
 			},
 		})
 	})

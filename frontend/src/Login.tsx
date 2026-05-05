@@ -1,5 +1,21 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import "./Login.css";
+
+type LoginResponse = {
+  token?: string;
+  error?: string;
+  message?: string;
+};
+
+const AUTH_TOKEN_KEY = "uniride-auth-token";
+
+function getStoredToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
+}
 
 export default function Login() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -9,6 +25,56 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [hydratingSession, setHydratingSession] = useState(true);
+
+  const clearSession = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  };
+
+  useEffect(() => {
+    const token = getStoredToken();
+
+    if (!token) {
+      setHydratingSession(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const hydrateSession = async () => {
+      try {
+        const response = await fetch("/api/private/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("invalid session");
+        }
+
+        await response.json();
+        window.location.replace("/placeholder");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        clearSession();
+      } finally {
+        if (!controller.signal.aborted) {
+          setHydratingSession(false);
+        }
+      }
+    };
+
+    void hydrateSession();
+
+    return () => controller.abort();
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,7 +103,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const endpoint = mode === "login" ? "/api/login" : "/api/register";
+      const endpoint = mode === "login" ? "/auth/login" : "/api/register";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -50,7 +116,7 @@ export default function Login() {
         }),
       });
 
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as LoginResponse;
 
       if (!response.ok) {
         setError(data.error ?? "No se pudo completar la solicitud.");
@@ -58,7 +124,14 @@ export default function Login() {
       }
 
       if (mode === "login") {
-        setOk(data.message ?? "Login exitoso");
+        if (!data.token) {
+          setError("La respuesta de login no incluye sesión válida.");
+          return;
+        }
+
+        window.localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        window.location.assign("/placeholder");
+        return;
       } else {
         setOk(data.message ?? "Usuario registrado correctamente.");
         setMode("login");
@@ -80,6 +153,18 @@ export default function Login() {
     setOk("");
     setPassword("");
   };
+
+  if (hydratingSession) {
+    return (
+      <main className="auth-page">
+        <section className="card auth-card auth-session-card">
+          <p className="session-kicker">Verificando sesión</p>
+          <h1 className="text-title">Restaurando acceso seguro</h1>
+          <p className="session-copy">Comprobando si existe un token válido antes de mostrar el formulario.</p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="auth-page">
