@@ -1,16 +1,6 @@
 import { useEffect, useState } from "react";
-import type { MouseEvent, ReactNode } from "react";
 import Login from "./Login";
 import SessionPlaceholder from "./SessionPlaceholder";
-
-const routes = [
-  { path: "/", label: "Home" },
-  { path: "/login", label: "Login" },
-  { path: "/register", label: "Register" },
-  { path: "/rides", label: "Rides" },
-  { path: "/create-ride", label: "Create ride" },
-  { path: "/profile", label: "Profile" },
-];
 
 const pageTitles: Record<string, string> = {
   "/": "UniRide",
@@ -41,86 +31,16 @@ function App() {
     };
   }, []);
 
-  const navigateTo = (path: string) => {
-    if (path === currentPath) {
-      return;
-    }
-
-    window.history.pushState({}, "", path);
-    setCurrentPath(path);
-  };
-
   return (
     <div>
-      <Header currentPath={currentPath} onNavigate={navigateTo} />
+      <Header />
       <main>{renderPage(currentPath)}</main>
     </div>
   );
 }
 
-function Header({
-  currentPath,
-  onNavigate,
-}: {
-  currentPath: string;
-  onNavigate: (path: string) => void;
-}) {
-  return (
-    <header>
-      <nav aria-label="Main navigation">
-        {routes.map((route) => (
-          <NavigationLink
-            key={route.path}
-            path={route.path}
-            currentPath={currentPath}
-            onNavigate={onNavigate}
-          >
-            {route.label}
-          </NavigationLink>
-        ))}
-      </nav>
-    </header>
-  );
-}
-
-function NavigationLink({
-  path,
-  currentPath,
-  onNavigate,
-  children,
-}: {
-  path: string;
-  currentPath: string;
-  onNavigate: (path: string) => void;
-  children: ReactNode;
-}) {
-  const isActive = currentPath === path;
-
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.altKey ||
-      event.ctrlKey ||
-      event.shiftKey
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    onNavigate(path);
-  };
-
-  return (
-    <a
-      href={path}
-      onClick={handleClick}
-      aria-current={isActive ? "page" : undefined}
-    >
-      {children}
-    </a>
-  );
+function Header() {
+  return <header />;
 }
 
 function renderPage(path: string) {
@@ -165,15 +85,7 @@ function renderPage(path: string) {
 }
 
 function HomePage() {
-  return (
-    <section>
-      <h1>UniRide</h1>
-      <p>
-        Shared university rides for students. This page is ready for future
-        product content.
-      </p>
-    </section>
-  );
+  return null;
 }
 
 function PlaceholderPage({
