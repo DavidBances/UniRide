@@ -16,8 +16,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,17 +39,12 @@ func main() {
 
 	cfg := config.Load()
 
-	db, err := sql.Open("pgx", cfg.DatabaseDSN())
+	db, err := database.Connect(ctx, cfg.DatabaseDSN())
 	if err != nil {
-		logger.Error("database open error", "error", err)
+		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
 	defer db.Close()
-
-	if err := db.PingContext(ctx); err != nil {
-		logger.Error("database ping error", "error", err)
-		os.Exit(1)
-	}
 
 	// Crear usuario de prueba "admin"
 	testPasswordHash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
