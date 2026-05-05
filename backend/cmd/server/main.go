@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,10 +14,10 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/bookings"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/router"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -32,9 +31,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := sql.Open("pgx", cfg.DatabaseDSN())
+	db, err := database.Connect(ctx, cfg.DatabaseDSN())
 	if err != nil {
-		logger.Error("database open error", "error", err)
+		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
 	defer db.Close()
