@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import Login from "./Login";
+import SessionPlaceholder from "./SessionPlaceholder";
 
 const routes = [
   { path: "/", label: "Home" },
@@ -11,8 +12,22 @@ const routes = [
   { path: "/profile", label: "Profile" },
 ];
 
+const pageTitles: Record<string, string> = {
+  "/": "UniRide",
+  "/login": "UniRide | Login",
+  "/register": "UniRide | Register",
+  "/rides": "UniRide | Rides",
+  "/create-ride": "UniRide | Create ride",
+  "/profile": "UniRide | Profile",
+  "/placeholder": "UniRide | Placeholder",
+};
+
 function App() {
   const [currentPath, setCurrentPath] = useState(getCurrentPath());
+
+  useEffect(() => {
+    document.title = pageTitles[currentPath] ?? "UniRide";
+  }, [currentPath]);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -142,6 +157,8 @@ function renderPage(path: string) {
           description="User profile page ready for future account features."
         />
       );
+    case "/placeholder":
+      return <SessionPlaceholder />;
     default:
       return <NotFoundPage />;
   }

@@ -100,11 +100,26 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "login successful",
+		"token": authenticatedUser.Token,
 		"user": gin.H{
 			"id":       authenticatedUser.ID,
 			"username": authenticatedUser.Username,
 			"email":    authenticatedUser.Email,
+		},
+	})
+}
+
+// Me returns the profile of the currently authenticated user.
+func (h *Handler) Me(c *gin.Context) {
+	userID := c.GetInt64("authUserID")
+	username, _ := c.Get("authUsername")
+	email, _ := c.Get("authEmail")
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":       userID,
+			"username": username,
+			"email":    email,
 		},
 	})
 }

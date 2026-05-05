@@ -14,6 +14,7 @@ type Config struct {
 	Port            string
 	GinMode         string
 	CORSAllowOrigin string
+	JWTSecret       string
 	DBHost          string
 	DBPort          string
 	DBUser          string
@@ -32,6 +33,7 @@ func Load() (*Config, error) {
 		Port:            getEnv("PORT", ""),
 		GinMode:         getEnv("GIN_MODE", "debug"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
+		JWTSecret:       getEnv("JWT_SECRET", "dev-jwt-secret-change-me"),
 		DBHost:          getEnv("DB_HOST", ""),
 		DBPort:          getEnv("DB_PORT", getEnv("POSTGRES_PORT", "5432")),
 		DBUser:          getEnv("DB_USER", ""),

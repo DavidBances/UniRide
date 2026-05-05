@@ -15,6 +15,7 @@ type Dependencies struct {
 	AuthHandler    *auth.Handler
 	RideHandler    *rides.Handler
 	BookingHandler *bookings.Handler
+	JWTSecret      string
 }
 
 // New creates and configures the HTTP router.
@@ -28,17 +29,23 @@ func New(dependencies Dependencies) *gin.Engine {
 
 	authGroup := engine.Group("/auth")
 	authGroup.POST("/register", dependencies.AuthHandler.Register)
+	authGroup.POST("/login", dependencies.AuthHandler.Login)
 
 	api := engine.Group("/api")
 	api.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
 
+	// Temporary backward-compatible route for existing frontend calls.
+	// New clients should use POST /auth/login.
 	api.POST("/login", dependencies.AuthHandler.Login)
 
 	// Temporary backward-compatible route for existing frontend calls.
 	// New clients should use POST /auth/register.
 	api.POST("/register", dependencies.AuthHandler.Register)
+
+	privateAPI := api.Group("/private", auth.Middleware(dependencies.JWTSecret))
+	privateAPI.GET("/me", dependencies.AuthHandler.Me)
 
 	ridesGroup := api.Group("/rides")
 	dependencies.RideHandler.RegisterRoutes(ridesGroup)

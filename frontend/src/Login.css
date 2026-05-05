@@ -16,6 +16,37 @@
   animation: rise-in 350ms ease-out;
 }
 
+.auth-session-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.session-kicker {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-brand-500);
+}
+
+.session-copy {
+  color: var(--color-text-muted);
+}
+
+.session-details {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(15, 116, 146, 0.06);
+}
+
+.session-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .auth-form {
   display: grid;
   gap: var(--space-4);

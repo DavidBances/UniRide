@@ -51,7 +51,7 @@ func main() {
 		logger.Info("default admin user ensured")
 	}
 
-	authService := auth.NewService(userRepository)
+	authService := auth.NewService(userRepository, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService, logger)
 
 	rideHandler := rides.NewHandler(logger)
@@ -63,6 +63,7 @@ func main() {
 		AuthHandler:    authHandler,
 		RideHandler:    rideHandler,
 		BookingHandler: bookingHandler,
+		JWTSecret:      cfg.JWTSecret,
 	})
 
 	server := &http.Server{
