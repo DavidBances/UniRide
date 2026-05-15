@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getStoredToken } from "./authToken";
 import Login from "./Login";
 import Register from "./Register";
+import RidesPage from "./RidesPage";
 import SessionPlaceholder from "./SessionPlaceholder";
 
 const pageTitles: Record<string, string> = {
@@ -56,12 +57,7 @@ function renderPage(path: string, hasToken: boolean) {
     case "/register":
       return <Register />;
     case "/rides":
-      return (
-        <PlaceholderPage
-          title="Rides"
-          description="Ride listing page ready for future ride features."
-        />
-      );
+      return <RidesPage />;
     case "/create-ride":
       return (
         <PlaceholderPage

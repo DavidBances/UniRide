@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiUrl } from "./api";
 import { clearStoredToken, getStoredToken } from "./authToken";
 import "./Login.css";
 
@@ -27,7 +28,7 @@ export default function SessionPlaceholder() {
 
     const hydrateSession = async () => {
       try {
-        const response = await fetch("/api/private/me", {
+        const response = await fetch(apiUrl("/api/private/me"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
