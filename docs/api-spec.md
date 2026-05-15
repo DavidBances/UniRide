@@ -252,10 +252,10 @@ PUT /api/v1/users/me
 
 # 5. Trip Endpoints
 
-## Create Trip
+## Create Trip / Ride
 
 ```
-POST /api/v1/trips
+POST /api/rides
 ```
 
 Authentication: **Required**
@@ -266,12 +266,13 @@ Authentication: **Required**
 {
   "origin": "León city center",
   "destination": "University campus",
-  "departure_at": "2026-03-25T08:30:00Z",
-  "total_seats": 3,
-  "price_per_seat": 2.50,
-  "notes": "Leaving from downtown parking area"
+  "departureDate": "2026-03-25T08:30:00Z",
+  "availableSeats": 3,
+  "price": 2.50
 }
 ```
+
+`POST /rides` is also available as a root-level alias.
 
 ### Response
 
@@ -279,57 +280,60 @@ Authentication: **Required**
 
 ```json
 {
-  "data": {
+  "message": "ride created successfully",
+  "ride": {
     "id": 10,
-    "driver_id": 1,
+    "driverId": 1,
     "origin": "León city center",
     "destination": "University campus",
-    "departure_at": "2026-03-25T08:30:00Z",
-    "total_seats": 3,
-    "available_seats": 3,
-    "price_per_seat": 2.50,
-    "status": "open",
-    "notes": "Leaving from downtown parking area"
+    "departureDate": "2026-03-25T08:30:00Z",
+    "availableSeats": 3,
+    "price": 2.50,
+    "status": "open"
   }
 }
 ```
 
 ---
 
-## List Trips
+## List Trips / Rides
 
 ```
-GET /api/v1/trips
+GET /api/rides
 ```
 
 ### Query Parameters
 
+All query parameters are optional and can be combined. Empty parameters are ignored.
+
 | Parameter | Description |
 |-----------|-------------|
-| origin | filter by origin |
-| destination | filter by destination |
-| date | filter by date |
-| status | trip status |
+| origin | Case-insensitive partial match by origin |
+| destination | Case-insensitive partial match by destination |
+| departureDate | Exact calendar date in `YYYY-MM-DD` format |
+| availableSeats | Minimum required available seats |
 
 Example:
 
 ```
-GET /api/v1/trips?origin=León&destination=Campus&date=2026-03-25&status=open
+GET /api/rides?origin=León&destination=Campus&departureDate=2026-03-25&availableSeats=2
 ```
+
+`GET /rides` is also available as a root-level alias.
 
 ### Response
 
 ```json
 {
-  "data": [
+  "rides": [
     {
       "id": 10,
-      "driver_id": 1,
+      "driverId": 1,
       "origin": "León city center",
       "destination": "University campus",
-      "departure_at": "2026-03-25T08:30:00Z",
-      "available_seats": 2,
-      "price_per_seat": 2.50,
+      "departureDate": "2026-03-25T08:30:00Z",
+      "availableSeats": 2,
+      "price": 2.50,
       "status": "open"
     }
   ]
