@@ -188,6 +188,13 @@ curl "http://localhost:8080/api/rides?origin=Madrid&destination=Barcelona&depart
 
 Supported query parameters are `origin`, `destination`, `departureDate` (`YYYY-MM-DD`) and `availableSeats` (minimum seats).
 
+List bookings for the authenticated user:
+
+```bash
+curl http://localhost:8080/api/me/bookings \
+  -H "Authorization: Bearer <token>"
+```
+
 ## Test Commands
 
 ### Backend + Frontend unit/integration tests
