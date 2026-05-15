@@ -432,6 +432,42 @@ GET /api/v1/trips/me/joined
 
 # 6. Trip Request Endpoints
 
+## List My Bookings
+
+```
+GET /me/bookings
+```
+
+Authentication: **Required**
+
+`GET /api/me/bookings` is also available for frontend API calls.
+
+### Response
+
+```json
+{
+  "bookings": [
+    {
+      "id": 1,
+      "seatsReserved": 2,
+      "status": "confirmed",
+      "createdAt": "2026-05-01T10:00:00Z",
+      "ride": {
+        "id": 10,
+        "route": "Madrid → Barcelona",
+        "origin": "Madrid",
+        "destination": "Barcelona",
+        "date": "2026-05-20T10:00:00Z",
+        "price": 15,
+        "status": "open"
+      }
+    }
+  ]
+}
+```
+
+The endpoint always uses the authenticated user from the JWT and never accepts a user id in query or body.
+
 ## Create Trip Request
 
 ```
