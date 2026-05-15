@@ -16,8 +16,10 @@ export default function Navbar() {
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/search" className="text-gray-700 hover:text-blue-600">Find Ride</Link>
-            <Link to="/publish" className="text-gray-700 hover:text-blue-600">Publish Ride</Link>
+            <Link to="/rides" className="text-gray-700 hover:text-blue-600">Find Ride</Link>
+            <Link to="/create-ride" className="text-gray-700 hover:text-blue-600">Publish Ride</Link>
+            <Link to="/profile" className="text-gray-700 hover:text-blue-600">Profile</Link>
+            <Link to="/register" className="text-gray-700 hover:text-blue-600">Register</Link>
             <Link to="/login" className="btn btn-primary">Login</Link>
           </div>
 
@@ -40,8 +42,10 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden border-t border-gray-100">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 flex flex-col">
-            <Link to="/search" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Find Ride</Link>
-            <Link to="/publish" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Publish Ride</Link>
+            <Link to="/rides" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Find Ride</Link>
+            <Link to="/create-ride" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Publish Ride</Link>
+            <Link to="/profile" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Profile</Link>
+            <Link to="/register" className="block px-3 py-2 text-gray-700 hover:bg-gray-50">Register</Link>
             <Link to="/login" className="block px-3 py-2 text-blue-600 font-bold hover:bg-gray-50">Login</Link>
           </div>
         </div>

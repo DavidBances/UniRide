@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import Login from "./Login";
 
 describe("Login form validation", () => {
@@ -14,7 +15,11 @@ describe("Login form validation", () => {
   });
 
   function renderLogin() {
-    render(<Login />);
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
+    );
   }
 
   it("shows required field error on login submit", () => {
