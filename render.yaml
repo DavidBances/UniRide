@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: uniride-backend
+    runtime: go
+    buildCommand: go build -o backend/bin/server ./backend/cmd/server
+    startCommand: ./backend/bin/server
+    envVars:
+      - key: GIN_MODE
+        value: release
+      - key: CORS_ALLOW_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: uniride-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: uniride-postgres
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: uniride-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: uniride-postgres
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: uniride-postgres
+          property: database
+      - key: DB_SSLMODE
+        value: require
+
+  - type: web
+    name: uniride-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+
+databases:
+  - name: uniride-postgres
+    databaseName: uniride
+    user: uniride

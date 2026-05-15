@@ -163,6 +163,31 @@ Set-Location frontend
 npm run build
 ```
 
+## Ride API Quick Test
+
+Create a ride with an authenticated user token:
+
+```bash
+curl -X POST http://localhost:8080/api/rides \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "origin": "Madrid",
+    "destination": "Barcelona",
+    "departureDate": "2026-05-20T08:30:00Z",
+    "availableSeats": 3,
+    "price": 12.50
+  }'
+```
+
+List rides with optional filters:
+
+```bash
+curl "http://localhost:8080/api/rides?origin=Madrid&destination=Barcelona&departureDate=2026-05-20&availableSeats=2"
+```
+
+Supported query parameters are `origin`, `destination`, `departureDate` (`YYYY-MM-DD`) and `availableSeats` (minimum seats).
+
 ## Test Commands
 
 ### Backend + Frontend unit/integration tests
@@ -245,6 +270,26 @@ make lint
 - How it was tested
 5. Request review from teammates before merging.
 6. Do not merge if CI is failing.
+
+## Deployment
+
+The repository includes `render.yaml` for a Render-based public deployment:
+
+- Backend: Render Web Service running the Go API.
+- Frontend: Render Static Site built from `frontend/`.
+- Database: Render PostgreSQL.
+
+Set these production variables in Render, without committing real secrets:
+
+- Backend: `JWT_SECRET`, `CORS_ALLOW_ORIGIN`, `GIN_MODE=release`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE=require`.
+- Frontend: `VITE_API_BASE_URL` with the public backend URL, for example `https://uniride-backend.onrender.com`.
+
+After provisioning the database, apply the SQL schema from `db/init.sql` or the migration files in `db/migrations/` using the provider SQL console or `psql`. Then verify:
+
+1. Backend `/health` responds publicly.
+2. Frontend opens publicly.
+3. Frontend requests go to the public backend URL.
+4. `CORS_ALLOW_ORIGIN` matches the public frontend URL.
 
 ## Quick Verification Checklist
 

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "./api";
 import "./Login.css";
 
 type RegisterResponse = {
@@ -58,7 +59,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const response = await fetch("/auth/register", {
+      const response = await fetch(apiUrl("/auth/register"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

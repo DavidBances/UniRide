@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { apiUrl } from "./api";
 import { clearStoredToken, getStoredToken, storeToken } from "./authToken";
 import "./Login.css";
 
@@ -40,7 +41,7 @@ export default function Login() {
 
     const hydrateSession = async () => {
       try {
-        const response = await fetch("/api/private/me", {
+        const response = await fetch(apiUrl("/api/private/me"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -99,7 +100,7 @@ export default function Login() {
     setLoading(true);
     try {
       const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
-      const response = await fetch(endpoint, {
+      const response = await fetch(apiUrl(endpoint), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
