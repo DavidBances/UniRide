@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Login from "./Login";
+import Register from "./Register";
 import SessionPlaceholder from "./SessionPlaceholder";
 
 const pageTitles: Record<string, string> = {
@@ -50,12 +51,7 @@ function renderPage(path: string) {
     case "/login":
       return <Login />;
     case "/register":
-      return (
-        <PlaceholderPage
-          title="Register"
-          description="User registration page ready for the next sprint."
-        />
-      );
+      return <Register />;
     case "/rides":
       return (
         <PlaceholderPage

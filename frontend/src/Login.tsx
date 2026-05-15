@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { clearStoredToken, getStoredToken, storeToken } from "./authToken";
 import "./Login.css";
 
 type LoginResponse = {
@@ -7,31 +9,24 @@ type LoginResponse = {
   message?: string;
 };
 
-const AUTH_TOKEN_KEY = "uniride-auth-token";
-
-function getStoredToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
-}
-
 export default function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const registerMessage =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "registerMessage" in location.state &&
+    typeof location.state.registerMessage === "string"
+      ? location.state.registerMessage
+      : "";
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
+  const [ok, setOk] = useState(registerMessage);
   const [hydratingSession, setHydratingSession] = useState(true);
-
-  const clearSession = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(AUTH_TOKEN_KEY);
-    }
-  };
 
   useEffect(() => {
     const token = getStoredToken();
@@ -57,13 +52,13 @@ export default function Login() {
         }
 
         await response.json();
-        window.location.replace("/placeholder");
+        navigate("/profile", { replace: true });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
 
-        clearSession();
+        clearStoredToken();
       } finally {
         if (!controller.signal.aborted) {
           setHydratingSession(false);
@@ -74,7 +69,7 @@ export default function Login() {
     void hydrateSession();
 
     return () => controller.abort();
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,7 +98,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const endpoint = mode === "login" ? "/auth/login" : "/api/register";
+      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -129,8 +124,8 @@ export default function Login() {
           return;
         }
 
-        window.localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        window.location.assign("/placeholder");
+        storeToken(data.token);
+        navigate("/profile");
         return;
       } else {
         setOk(data.message ?? "Usuario registrado correctamente.");
