@@ -17,7 +17,10 @@ func Connect(ctx context.Context, dsn string) (*sql.DB, error) {
 	}
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			return nil, fmt.Errorf("error pinging database: %w; error closing database: %w", err, closeErr)
+		}
+
 		return nil, fmt.Errorf("error pinging database: %w", err)
 	}
 

@@ -55,11 +55,7 @@ func (h *Handler) Register(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
-	registeredUser, err := h.service.Register(ctx, RegisterInput{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: req.Password,
-	})
+	registeredUser, err := h.service.Register(ctx, RegisterInput(req))
 
 	if err != nil {
 		h.handleRegisterError(c, err)
@@ -89,10 +85,7 @@ func (h *Handler) Login(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
-	authenticatedUser, err := h.service.Login(ctx, LoginInput{
-		Email:    req.Email,
-		Password: req.Password,
-	})
+	authenticatedUser, err := h.service.Login(ctx, LoginInput(req))
 
 	if err != nil {
 		h.handleLoginError(c, err)

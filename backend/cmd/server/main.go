@@ -37,12 +37,15 @@ func main() {
 		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
 
 	if err := db.PingContext(ctx); err != nil {
 		logger.Error("database ping error", "error", err)
+		if closeErr := db.Close(); closeErr != nil {
+			logger.Error("database close error", "error", closeErr)
+		}
 		os.Exit(1)
 	}
+	defer db.Close()
 
 	userRepository := users.NewRepository(db)
 
