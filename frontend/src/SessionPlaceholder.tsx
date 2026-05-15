@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { clearStoredToken, getStoredToken } from "./authToken";
 import "./Login.css";
 
 type User = {
@@ -11,16 +12,6 @@ type MeResponse = {
   user: User;
 };
 
-const AUTH_TOKEN_KEY = "uniride-auth-token";
-
-function getStoredToken() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
-}
-
 export default function SessionPlaceholder() {
   const [hydratingSession, setHydratingSession] = useState(true);
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -28,7 +19,7 @@ export default function SessionPlaceholder() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
-      window.location.replace("/");
+      window.location.replace("/login");
       return;
     }
 
@@ -54,8 +45,8 @@ export default function SessionPlaceholder() {
           return;
         }
 
-        window.localStorage.removeItem(AUTH_TOKEN_KEY);
-        window.location.replace("/");
+        clearStoredToken();
+        window.location.replace("/login");
         return;
       }
 
@@ -70,7 +61,7 @@ export default function SessionPlaceholder() {
   }, []);
 
   const handleLogout = () => {
-    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    clearStoredToken();
     window.location.replace("/");
   };
 

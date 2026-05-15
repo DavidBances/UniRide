@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getStoredToken } from "./authToken";
 import Login from "./Login";
 import Register from "./Register";
 import SessionPlaceholder from "./SessionPlaceholder";
@@ -14,28 +16,25 @@ const pageTitles: Record<string, string> = {
 };
 
 function App() {
-  const [currentPath, setCurrentPath] = useState(getCurrentPath());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentPath = normalizePath(location.pathname);
+  const hasToken = Boolean(getStoredToken());
 
   useEffect(() => {
     document.title = pageTitles[currentPath] ?? "UniRide";
   }, [currentPath]);
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(getCurrentPath());
-    };
-
-    window.addEventListener("popstate", handleLocationChange);
-
-    return () => {
-      window.removeEventListener("popstate", handleLocationChange);
-    };
-  }, []);
+    if (isPrivateRoute(currentPath) && !hasToken) {
+      navigate("/login", { replace: true });
+    }
+  }, [currentPath, hasToken, navigate]);
 
   return (
     <div>
       <Header />
-      <main>{renderPage(currentPath)}</main>
+      <main>{renderPage(currentPath, hasToken)}</main>
     </div>
   );
 }
@@ -44,7 +43,11 @@ function Header() {
   return <header />;
 }
 
-function renderPage(path: string) {
+function renderPage(path: string, hasToken: boolean) {
+  if (isPrivateRoute(path) && !hasToken) {
+    return <RedirectingPrivatePage />;
+  }
+
   switch (path) {
     case "/":
       return <HomePage />;
@@ -67,12 +70,7 @@ function renderPage(path: string) {
         />
       );
     case "/profile":
-      return (
-        <PlaceholderPage
-          title="Profile"
-          description="User profile page ready for future account features."
-        />
-      );
+      return <SessionPlaceholder />;
     case "/placeholder":
       return <SessionPlaceholder />;
     default:
@@ -109,9 +107,20 @@ function NotFoundPage() {
   );
 }
 
-function getCurrentPath() {
-  const path = window.location.pathname;
+function RedirectingPrivatePage() {
+  return (
+    <section>
+      <h1>Redirecting</h1>
+      <p>Inicia sesión para acceder a esta página.</p>
+    </section>
+  );
+}
 
+function isPrivateRoute(path: string) {
+  return path === "/profile" || path === "/create-ride";
+}
+
+function normalizePath(path: string) {
   if (path.length > 1 && path.endsWith("/")) {
     return path.slice(0, -1);
   }
