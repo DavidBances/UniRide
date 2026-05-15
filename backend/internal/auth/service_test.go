@@ -79,7 +79,7 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	}
 
 	_, err := svc.Register(context.Background(), input)
-	if err != errDuplicate {
+	if !errors.Is(err, errDuplicate) {
 		t.Fatalf("expected duplicate email error, got %v", err)
 	}
 }
