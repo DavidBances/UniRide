@@ -12,16 +12,18 @@ import (
 
 // Dependencies contains the handlers required by the HTTP router.
 type Dependencies struct {
-	AuthHandler    *auth.Handler
-	RideHandler    *rides.Handler
-	BookingHandler *bookings.Handler
-	JWTSecret      string
+	AuthHandler     *auth.Handler
+	RideHandler     *rides.Handler
+	BookingHandler  *bookings.Handler
+	JWTSecret       string
+	CORSAllowOrigin string
 }
 
 // New creates and configures the HTTP router.
 func New(dependencies Dependencies) *gin.Engine {
 	engine := gin.New()
 	engine.Use(gin.Logger(), gin.Recovery())
+	engine.Use(corsMiddleware(dependencies.CORSAllowOrigin))
 
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -48,10 +50,32 @@ func New(dependencies Dependencies) *gin.Engine {
 	privateAPI.GET("/me", dependencies.AuthHandler.Me)
 
 	ridesGroup := api.Group("/rides")
-	dependencies.RideHandler.RegisterRoutes(ridesGroup)
+	dependencies.RideHandler.RegisterRoutes(ridesGroup, auth.Middleware(dependencies.JWTSecret))
+
+	rootRidesGroup := engine.Group("/rides")
+	dependencies.RideHandler.RegisterRoutes(rootRidesGroup, auth.Middleware(dependencies.JWTSecret))
 
 	bookingsGroup := api.Group("/bookings")
 	dependencies.BookingHandler.RegisterRoutes(bookingsGroup)
 
 	return engine
+}
+
+func corsMiddleware(allowOrigin string) gin.HandlerFunc {
+	if allowOrigin == "" {
+		allowOrigin = "*"
+	}
+
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", allowOrigin)
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
 }

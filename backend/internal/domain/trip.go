@@ -18,9 +18,17 @@ type Trip struct {
 	CreatedAt      time.Time
 }
 
+// TripFilters contains optional filters for listing open trips.
+type TripFilters struct {
+	Origin         string
+	Destination    string
+	DepartureDate  *time.Time
+	AvailableSeats *int
+}
+
 // TripRepository defines the contract for trip data access.
 type TripRepository interface {
 	Create(ctx context.Context, trip *Trip) error
 	GetByID(ctx context.Context, id int64) (*Trip, error)
-	ListOpenTrips(ctx context.Context) ([]*Trip, error)
+	ListOpenTrips(ctx context.Context, filters TripFilters) ([]*Trip, error)
 }

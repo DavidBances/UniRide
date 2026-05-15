@@ -15,6 +15,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/bookings"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/repository"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/router"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
@@ -54,16 +55,18 @@ func main() {
 	authService := auth.NewService(userRepository, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService, logger)
 
-	rideHandler := rides.NewHandler(logger)
+	tripRepository := repository.NewTripRepository(db)
+	rideHandler := rides.NewHandler(tripRepository, logger)
 	bookingHandler := bookings.NewHandler(logger)
 
 	gin.SetMode(cfg.GinMode)
 
 	engine := router.New(router.Dependencies{
-		AuthHandler:    authHandler,
-		RideHandler:    rideHandler,
-		BookingHandler: bookingHandler,
-		JWTSecret:      cfg.JWTSecret,
+		AuthHandler:     authHandler,
+		RideHandler:     rideHandler,
+		BookingHandler:  bookingHandler,
+		JWTSecret:       cfg.JWTSecret,
+		CORSAllowOrigin: cfg.CORSAllowOrigin,
 	})
 
 	server := &http.Server{
