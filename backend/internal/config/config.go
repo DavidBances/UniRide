@@ -30,15 +30,15 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:            getEnv("PORT", ""),
+		Port:            getEnv("PORT", "8080"),
 		GinMode:         getEnv("GIN_MODE", "debug"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
 		JWTSecret:       getEnv("JWT_SECRET", "dev-jwt-secret-change-me"),
-		DBHost:          getEnv("DB_HOST", ""),
+		DBHost:          getEnv("DB_HOST", getEnv("POSTGRES_HOST", "localhost")),
 		DBPort:          getEnv("DB_PORT", getEnv("POSTGRES_PORT", "5432")),
-		DBUser:          getEnv("DB_USER", ""),
-		DBPassword:      getEnv("DB_PASSWORD", ""),
-		DBName:          getEnv("DB_NAME", ""),
+		DBUser:          getEnv("DB_USER", getEnv("POSTGRES_USER", "")),
+		DBPassword:      getEnv("DB_PASSWORD", getEnv("POSTGRES_PASSWORD", "")),
+		DBName:          getEnv("DB_NAME", getEnv("POSTGRES_DB", "")),
 		DBSSLMode:       getEnv("DB_SSLMODE", "disable"),
 	}
 

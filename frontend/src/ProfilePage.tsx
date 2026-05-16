@@ -39,9 +39,10 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [error, setError] = useState("");
+  const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
+  const token = getStoredToken();
 
   useEffect(() => {
-    const token = getStoredToken();
     if (!token) {
       window.location.replace("/login");
       return;
@@ -93,7 +94,7 @@ export default function ProfilePage() {
     void loadProfile();
 
     return () => controller.abort();
-  }, []);
+  }, [token]);
 
   const upcomingBookings = useMemo(
     () => bookings.filter((booking) => new Date(booking.ride.date).getTime() >= Date.now()).length,
@@ -103,6 +104,33 @@ export default function ProfilePage() {
   const handleLogout = () => {
     clearStoredToken();
     window.location.replace("/");
+  };
+
+  const handleDeleteBooking = async (bookingId: number) => {
+    if (!token) return;
+
+    setDeletingBookingId(bookingId);
+
+    try {
+      const response = await fetch(apiUrl(`/api/bookings/${bookingId}`), {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        setError(data.error ?? "No se pudo eliminar la reserva.");
+        return;
+      }
+
+      setBookings((current) => current.filter((b) => b.id !== bookingId));
+    } catch (err) {
+      setError("Error de conexión al intentar eliminar la reserva.");
+    } finally {
+      setDeletingBookingId(null);
+    }
   };
 
   if (loading) {
@@ -177,9 +205,19 @@ export default function ProfilePage() {
                       {booking.status}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700">
-                    {booking.seatsReserved} seats · {Number(booking.ride.price).toFixed(2)} EUR
-                  </p>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm text-gray-700">
+                      {booking.seatsReserved} seats · {Number(booking.ride.price).toFixed(2)} EUR
+                    </p>
+                  </div>
+                  <button
+                    className="btn border border-red-200 bg-red-50 text-red-700 w-full text-sm"
+                    type="button"
+                    onClick={() => handleDeleteBooking(booking.id)}
+                    disabled={deletingBookingId === booking.id}
+                  >
+                    {deletingBookingId === booking.id ? "Eliminando..." : "Cancel booking"}
+                  </button>
                 </article>
               ))
             )}

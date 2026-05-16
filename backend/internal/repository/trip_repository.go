@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -22,7 +23,7 @@ func NewTripRepository(db *sql.DB) domain.TripRepository {
 func (r *tripRepository) Create(ctx context.Context, trip *domain.Trip) error {
 	err := r.db.QueryRowContext(
 		ctx,
-		`INSERT INTO trips (driver_id, origin, destination, departure_date, available_seats, price_per_seat, status)
+		`INSERT INTO ride (driver_id, origin, destination, departure_date, available_seats, price_per_seat, status)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 RETURNING id, created_at`,
 		trip.DriverID,
@@ -46,7 +47,7 @@ func (r *tripRepository) GetByID(ctx context.Context, id int64) (*domain.Trip, e
 	err := r.db.QueryRowContext(
 		ctx,
 		`SELECT id, driver_id, origin, destination, departure_date, available_seats, price_per_seat, status, created_at
-		 FROM trips
+		 FROM ride
 		 WHERE id = $1`,
 		id,
 	).Scan(
@@ -67,9 +68,56 @@ func (r *tripRepository) GetByID(ctx context.Context, id int64) (*domain.Trip, e
 	return &trip, nil
 }
 
+func (r *tripRepository) GetRideDetailsByID(ctx context.Context, id int64) (*domain.RideDetails, error) {
+	var ride domain.RideDetails
+
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT
+			rd.id,
+			rd.driver_id,
+			rd.origin,
+			rd.destination,
+			rd.departure_date,
+			rd.available_seats,
+			rd.price_per_seat,
+			rd.created_at,
+			u.id,
+			u.username,
+			u.email,
+			u.created_at
+		 FROM ride rd
+		 JOIN users u ON u.id = rd.driver_id
+		 WHERE rd.id = $1`,
+		id,
+	).Scan(
+		&ride.ID,
+		&ride.DriverID,
+		&ride.Origin,
+		&ride.Destination,
+		&ride.DepartureDate,
+		&ride.AvailableSeats,
+		&ride.PricePerSeat,
+		&ride.CreatedAt,
+		&ride.Driver.ID,
+		&ride.Driver.Username,
+		&ride.Driver.Email,
+		&ride.Driver.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrRideNotFound
+		}
+
+		return nil, fmt.Errorf("failed to get ride details: %w", err)
+	}
+
+	return &ride, nil
+}
+
 func (r *tripRepository) ListOpenTrips(ctx context.Context, filters domain.TripFilters) ([]*domain.Trip, error) {
 	query := `SELECT id, driver_id, origin, destination, departure_date, available_seats, price_per_seat, status, created_at
-		FROM trips
+		FROM ride
 		WHERE status = 'open'`
 	args := []any{}
 	conditions := []string{}

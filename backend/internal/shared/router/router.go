@@ -62,7 +62,10 @@ func New(dependencies Dependencies) *gin.Engine {
 	dependencies.RideHandler.RegisterRoutes(rootRidesGroup, auth.Middleware(dependencies.JWTSecret))
 
 	bookingsGroup := api.Group("/bookings")
-	dependencies.BookingHandler.RegisterRoutes(bookingsGroup)
+	dependencies.BookingHandler.RegisterRoutes(bookingsGroup, auth.Middleware(dependencies.JWTSecret))
+
+	rootBookingsGroup := engine.Group("/bookings")
+	dependencies.BookingHandler.RegisterRoutes(rootBookingsGroup, auth.Middleware(dependencies.JWTSecret))
 
 	return engine
 }

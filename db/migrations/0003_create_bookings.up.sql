@@ -1,6 +1,6 @@
 CREATE TABLE bookings (
     id SERIAL PRIMARY KEY,
-    ride_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    ride_id INTEGER NOT NULL REFERENCES ride(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     seats_reserved INTEGER NOT NULL CHECK (seats_reserved > 0),
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled')),

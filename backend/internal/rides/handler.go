@@ -54,7 +54,34 @@ func NewHandler(repository domain.TripRepository, logger *slog.Logger) *Handler 
 // RegisterRoutes registers ride routes.
 func (h *Handler) RegisterRoutes(routeGroup *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	routeGroup.GET("", h.List)
+	routeGroup.GET("/:id", h.GetByID)
 	routeGroup.POST("", authMiddleware, h.Create)
+}
+
+// GetByID returns the ride details for a single ride.
+func (h *Handler) GetByID(c *gin.Context) {
+	rideID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || rideID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ride id"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	ride, err := h.repository.GetRideDetailsByID(ctx, rideID)
+	if err != nil {
+		if errors.Is(err, domain.ErrRideNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
+			return
+		}
+
+		h.logger.Error("failed to get ride details", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get ride details"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ride": mapRideDetailsResponse(ride)})
 }
 
 // List returns the list of available rides.
@@ -217,5 +244,25 @@ func mapTripResponse(trip *domain.Trip) gin.H {
 		"price":          trip.PricePerSeat,
 		"status":         trip.Status,
 		"createdAt":      trip.CreatedAt,
+	}
+}
+
+func mapRideDetailsResponse(ride *domain.RideDetails) gin.H {
+	return gin.H{
+		"id":             ride.ID,
+		"driverId":       ride.DriverID,
+		"origin":         ride.Origin,
+		"destination":    ride.Destination,
+		"departureDate":  ride.DepartureDate,
+		"availableSeats": ride.AvailableSeats,
+		"pricePerSeat":   ride.PricePerSeat,
+		"status":         ride.Status,
+		"createdAt":      ride.CreatedAt,
+		"driver": gin.H{
+			"id":        ride.Driver.ID,
+			"username":  ride.Driver.Username,
+			"email":     ride.Driver.Email,
+			"createdAt": ride.Driver.CreatedAt,
+		},
 	}
 }
