@@ -1,0 +1,2 @@
+-- This migration is obsolete. The 'rides' table was merged into 'ride' table.
+-- This file is kept for historical reference only.

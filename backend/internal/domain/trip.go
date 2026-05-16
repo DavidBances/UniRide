@@ -2,8 +2,11 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrRideNotFound = errors.New("ride not found")
 
 // Trip represents a ride published by a driver (equivalent to "Ride").
 type Trip struct {
@@ -18,6 +21,28 @@ type Trip struct {
 	CreatedAt      time.Time
 }
 
+// RideDriver contains the public driver information returned in ride detail responses.
+type RideDriver struct {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// RideDetails represents a ride with the driver profile included.
+type RideDetails struct {
+	ID             int64      `json:"id"`
+	DriverID       int64      `json:"driverId"`
+	Origin         string     `json:"origin"`
+	Destination    string     `json:"destination"`
+	DepartureDate  time.Time  `json:"departureDate"`
+	AvailableSeats int        `json:"availableSeats"`
+	PricePerSeat   float64    `json:"pricePerSeat"`
+	Status         string     `json:"status"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	Driver         RideDriver `json:"driver"`
+}
+
 // TripFilters contains optional filters for listing open trips.
 type TripFilters struct {
 	Origin         string
@@ -30,5 +55,6 @@ type TripFilters struct {
 type TripRepository interface {
 	Create(ctx context.Context, trip *Trip) error
 	GetByID(ctx context.Context, id int64) (*Trip, error)
+	GetRideDetailsByID(ctx context.Context, id int64) (*RideDetails, error)
 	ListOpenTrips(ctx context.Context, filters TripFilters) ([]*Trip, error)
 }

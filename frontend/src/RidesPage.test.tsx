@@ -62,4 +62,25 @@ describe("RidesPage", () => {
       );
     });
   });
+
+  it("shows a loading state while rides are being fetched", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () => new Promise<Response>(() => {}) as Promise<Response>
+    );
+
+    render(<RidesPage />);
+
+    expect(screen.getByText("Cargando viajes...")).toBeTruthy();
+  });
+
+  it("shows an empty state when there are no rides", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ rides: [] }),
+    } as Response);
+
+    render(<RidesPage />);
+
+    expect(await screen.findByText("No hay viajes disponibles.")).toBeTruthy();
+  });
 });

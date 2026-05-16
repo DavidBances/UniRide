@@ -26,7 +26,10 @@ type BookingRideSummary struct {
 	Status        string
 }
 
-// BookingRepository defines read access for user bookings.
+// BookingRepository defines data access for user bookings.
 type BookingRepository interface {
 	ListByUserID(ctx context.Context, userID int64) ([]*Booking, error)
+	Create(ctx context.Context, booking *Booking) error
+	DeleteByID(ctx context.Context, bookingID int64) error
+	GetByID(ctx context.Context, bookingID int64) (*Booking, error)
 }
