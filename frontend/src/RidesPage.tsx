@@ -131,7 +131,7 @@ export default function RidesPage() {
 
       setSelectedRide(null);
       setReservationError("");
-    } catch (error) {
+    } catch {
       setReservationError("Error de conexión al servidor.");
     } finally {
       setReservationLoading(false);
