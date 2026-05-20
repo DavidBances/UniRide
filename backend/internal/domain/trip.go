@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// ErrRideNotFound is returned when a ride cannot be found.
 var ErrRideNotFound = errors.New("ride not found")
 
 // Trip represents a ride published by a driver (equivalent to "Ride").

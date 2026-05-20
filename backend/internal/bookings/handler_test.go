@@ -50,7 +50,7 @@ func setupBookingRouter(t *testing.T) (*gin.Engine, *fakeBookingRepository) {
 	gin.SetMode(gin.TestMode)
 
 	repo := &fakeBookingRepository{}
-	handler := NewHandler(repo, nil)
+	handler := NewHandler(repo, nil, nil)
 	router := gin.New()
 	group := router.Group("/me", auth.Middleware("test-secret"))
 	group.GET("/bookings", handler.ListCurrentUser)
@@ -100,5 +100,21 @@ func (r *fakeBookingRepository) ListByUserID(_ context.Context, userID int64) ([
 				Status:        "open",
 			},
 		},
+	}, nil
+}
+
+func (r *fakeBookingRepository) Create(_ context.Context, booking *domain.Booking) error {
+	booking.ID = 1
+	return nil
+}
+
+func (r *fakeBookingRepository) DeleteByID(_ context.Context, _ int64) error {
+	return nil
+}
+
+func (r *fakeBookingRepository) GetByID(_ context.Context, bookingID int64) (*domain.Booking, error) {
+	return &domain.Booking{
+		ID:     bookingID,
+		UserID: r.userID,
 	}, nil
 }
