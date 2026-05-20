@@ -20,6 +20,8 @@ type Trip struct {
 	PricePerSeat   float64
 	Status         string
 	CreatedAt      time.Time
+	AverageRating  float64
+	ReviewCount    int
 }
 
 // RideDriver contains the public driver information returned in ride detail responses.
@@ -41,6 +43,8 @@ type RideDetails struct {
 	PricePerSeat   float64    `json:"pricePerSeat"`
 	Status         string     `json:"status"`
 	CreatedAt      time.Time  `json:"createdAt"`
+	AverageRating  float64    `json:"averageRating"`
+	ReviewCount    int        `json:"reviewCount"`
 	Driver         RideDriver `json:"driver"`
 }
 

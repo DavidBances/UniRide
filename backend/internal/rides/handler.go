@@ -244,6 +244,8 @@ func mapTripResponse(trip *domain.Trip) gin.H {
 		"price":          trip.PricePerSeat,
 		"status":         trip.Status,
 		"createdAt":      trip.CreatedAt,
+		"averageRating":  trip.AverageRating,
+		"reviewCount":    trip.ReviewCount,
 	}
 }
 
@@ -258,6 +260,8 @@ func mapRideDetailsResponse(ride *domain.RideDetails) gin.H {
 		"pricePerSeat":   ride.PricePerSeat,
 		"status":         ride.Status,
 		"createdAt":      ride.CreatedAt,
+		"averageRating":  ride.AverageRating,
+		"reviewCount":    ride.ReviewCount,
 		"driver": gin.H{
 			"id":        ride.Driver.ID,
 			"username":  ride.Driver.Username,

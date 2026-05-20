@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/bookings"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/reviews"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
 )
 
@@ -15,6 +16,7 @@ type Dependencies struct {
 	AuthHandler     *auth.Handler
 	RideHandler     *rides.Handler
 	BookingHandler  *bookings.Handler
+	ReviewHandler   *reviews.Handler
 	JWTSecret       string
 	CORSAllowOrigin string
 }
@@ -66,6 +68,12 @@ func New(dependencies Dependencies) *gin.Engine {
 
 	rootBookingsGroup := engine.Group("/bookings")
 	dependencies.BookingHandler.RegisterRoutes(rootBookingsGroup, auth.Middleware(dependencies.JWTSecret))
+
+	reviewsGroup := api.Group("/reviews")
+	dependencies.ReviewHandler.RegisterRoutes(reviewsGroup, auth.Middleware(dependencies.JWTSecret))
+
+	rootReviewsGroup := engine.Group("/reviews")
+	dependencies.ReviewHandler.RegisterRoutes(rootReviewsGroup, auth.Middleware(dependencies.JWTSecret))
 
 	return engine
 }

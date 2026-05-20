@@ -11,6 +11,8 @@ type Ride = {
   availableSeats: number;
   price: number;
   status: string;
+  averageRating: number;
+  reviewCount: number;
 };
 
 type RidesResponse = {
@@ -242,13 +244,18 @@ export default function RidesPage() {
                   <dt className="text-label">Price</dt>
                   <dd className="font-bold">{Number(ride.price).toFixed(2)} EUR</dd>
                 </div>
+                <div>
+                  <dt className="text-label">Rating</dt>
+                  <dd className="font-bold">{formatRating(ride.averageRating, ride.reviewCount)}</dd>
+                </div>
               </dl>
               <button
                 className="btn btn-primary w-full"
                 type="button"
                 onClick={() => handleReserveClick(ride)}
+                disabled={ride.status !== "open"}
               >
-                Reservar
+                {ride.status === "open" ? "Reservar" : "Completed ride"}
               </button>
             </article>
           ))}
@@ -362,4 +369,12 @@ function formatRideDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function formatRating(averageRating: number, reviewCount: number) {
+  if (!reviewCount) {
+    return "No ratings yet";
+  }
+
+  return `${Number(averageRating).toFixed(1)}/5 (${reviewCount})`;
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/database"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/repository"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/reviews"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/router"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
@@ -60,8 +61,10 @@ func main() {
 
 	tripRepository := repository.NewTripRepository(db)
 	bookingRepository := repository.NewBookingRepository(db)
+	reviewRepository := repository.NewReviewRepository(db)
 	rideHandler := rides.NewHandler(tripRepository, logger)
 	bookingHandler := bookings.NewHandler(bookingRepository, tripRepository, logger)
+	reviewHandler := reviews.NewHandler(reviewRepository, tripRepository, logger)
 
 	gin.SetMode(cfg.GinMode)
 
@@ -69,6 +72,7 @@ func main() {
 		AuthHandler:     authHandler,
 		RideHandler:     rideHandler,
 		BookingHandler:  bookingHandler,
+		ReviewHandler:   reviewHandler,
 		JWTSecret:       cfg.JWTSecret,
 		CORSAllowOrigin: cfg.CORSAllowOrigin,
 	})

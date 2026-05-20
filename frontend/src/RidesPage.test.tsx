@@ -26,6 +26,8 @@ describe("RidesPage", () => {
             availableSeats: 3,
             price: 12.5,
             status: "open",
+            averageRating: 4.5,
+            reviewCount: 2,
           },
         ],
       }),
@@ -34,6 +36,7 @@ describe("RidesPage", () => {
     render(<RidesPage />);
 
     expect(await screen.findByText("Madrid to Barcelona")).toBeTruthy();
+    expect(screen.getByText("4.5/5 (2)")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/rides", expect.any(Object));
   });
 

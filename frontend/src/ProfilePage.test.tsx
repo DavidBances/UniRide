@@ -48,6 +48,8 @@ describe("ProfilePage", () => {
                 date: "2026-05-20T10:00:00Z",
                 price: 12.5,
                 status: "open",
+                averageRating: 4.5,
+                reviewCount: 2,
               },
             },
           ],
@@ -68,6 +70,7 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
     expect(screen.getByText("Leon to Madrid")).toBeTruthy();
     expect(screen.getByText("Reserved seats")).toBeTruthy();
+    expect(screen.getByText("4.5/5 (2)")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/private/me",
       expect.objectContaining({
@@ -181,6 +184,8 @@ describe("ProfilePage", () => {
                 date: "2026-05-20T10:00:00Z",
                 price: 12.5,
                 status: "open",
+                averageRating: 0,
+                reviewCount: 0,
               },
             },
           ],
@@ -206,5 +211,84 @@ describe("ProfilePage", () => {
         headers: { Authorization: "Bearer token-123" },
       })
     );
+  });
+
+  it("submits a rating for a completed booking", async () => {
+    window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).endsWith("/api/private/me")) {
+        return {
+          ok: true,
+          json: async () => ({
+            user: {
+              id: 7,
+              username: "Ada",
+              email: "ada@uni.es",
+            },
+          }),
+        } as Response;
+      }
+
+      if (String(input).endsWith("/api/reviews")) {
+        return {
+          ok: true,
+          json: async () => ({ message: "review created successfully" }),
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          bookings: [
+            {
+              id: 1,
+              seatsReserved: 1,
+              status: "confirmed",
+              createdAt: "2026-05-01T10:00:00Z",
+              ride: {
+                id: 10,
+                route: "Leon to Madrid",
+                origin: "Leon",
+                destination: "Madrid",
+                date: "2026-05-20T10:00:00Z",
+                price: 12.5,
+                status: "completed",
+                averageRating: 0,
+                reviewCount: 0,
+              },
+            },
+          ],
+        }),
+      } as Response;
+    });
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rate ride" }));
+    fireEvent.change(screen.getByLabelText("Rating"), { target: { value: "4" } });
+    fireEvent.change(screen.getByLabelText("Comment"), { target: { value: "Comfortable trip" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit review" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/reviews",
+        expect.objectContaining({
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer token-123",
+          },
+          body: JSON.stringify({
+            rideId: 10,
+            rating: 4,
+            comment: "Comfortable trip",
+          }),
+        })
+      );
+    });
   });
 });

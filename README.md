@@ -195,6 +195,17 @@ curl http://localhost:8080/api/me/bookings \
   -H "Authorization: Bearer <token>"
 ```
 
+Submit a review for a completed ride:
+
+```bash
+curl -X POST http://localhost:8080/api/reviews \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"rideId":4,"rating":5,"comment":"Great ride"}'
+```
+
+Reviews are linked to the completed ride, the authenticated reviewer and the reviewed driver. Ride responses include `averageRating` and `reviewCount`, and the frontend displays ratings in ride cards and completed bookings.
+
 ## Test Commands
 
 ### Backend + Frontend unit/integration tests

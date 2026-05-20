@@ -26,6 +26,8 @@ type Booking = {
     date: string;
     price: number;
     status: string;
+    averageRating: number;
+    reviewCount: number;
   };
 };
 
@@ -41,6 +43,11 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
+  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     const token = getStoredToken();
@@ -137,6 +144,52 @@ export default function ProfilePage() {
       setError("Error de conexion al intentar cancelar la reserva.");
     } finally {
       setDeletingBookingId(null);
+    }
+  };
+
+  const openReviewForm = (booking: Booking) => {
+    setReviewBooking(booking);
+    setReviewRating(5);
+    setReviewComment("");
+    setReviewError("");
+  };
+
+  const handleSubmitReview = async () => {
+    const token = getStoredToken();
+    if (!reviewBooking || !token) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    setReviewLoading(true);
+    setReviewError("");
+
+    try {
+      const response = await fetch(apiUrl("/api/reviews"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rideId: reviewBooking.ride.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setReviewError(data.error ?? "Could not submit review.");
+        return;
+      }
+
+      setReviewBooking(null);
+      setReviewComment("");
+    } catch {
+      setReviewError("Connection error while submitting the review.");
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -243,15 +296,27 @@ export default function ProfilePage() {
                   <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <ProfileField label="Seats" value={String(booking.seatsReserved)} />
                     <ProfileField label="Price" value={`${Number(booking.ride.price).toFixed(2)} EUR`} />
+                    <ProfileField label="Rating" value={formatRating(booking.ride.averageRating, booking.ride.reviewCount)} />
                   </dl>
-                  <button
-                    className="btn mt-4 w-full border border-red-200 bg-red-50 text-sm text-red-700"
-                    type="button"
-                    onClick={() => handleDeleteBooking(booking.id)}
-                    disabled={deletingBookingId === booking.id}
-                  >
-                    {deletingBookingId === booking.id ? "Cancelling..." : "Cancel booking"}
-                  </button>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {booking.ride.status === "completed" && (
+                      <button
+                        className="btn border border-teal-200 bg-teal-50 text-sm text-teal-800"
+                        type="button"
+                        onClick={() => openReviewForm(booking)}
+                      >
+                        Rate ride
+                      </button>
+                    )}
+                    <button
+                      className="btn border border-red-200 bg-red-50 text-sm text-red-700"
+                      type="button"
+                      onClick={() => handleDeleteBooking(booking.id)}
+                      disabled={deletingBookingId === booking.id}
+                    >
+                      {deletingBookingId === booking.id ? "Cancelling..." : "Cancel booking"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -273,6 +338,68 @@ export default function ProfilePage() {
           </div>
         </section>
       </div>
+
+      {reviewBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="text-xl font-bold text-gray-950">Rate ride</h2>
+            <p className="mt-2 text-sm text-gray-600">{reviewBooking.ride.route}</p>
+
+            {reviewError && <p className="message message-error mt-4">{reviewError}</p>}
+
+            <div className="mt-5 grid gap-4">
+              <div className="field">
+                <label className="text-label" htmlFor="review-rating">
+                  Rating
+                </label>
+                <select
+                  className="input"
+                  id="review-rating"
+                  value={reviewRating}
+                  onChange={(event) => setReviewRating(Number(event.target.value))}
+                >
+                  <option value={5}>5 - Excellent</option>
+                  <option value={4}>4 - Good</option>
+                  <option value={3}>3 - Okay</option>
+                  <option value={2}>2 - Poor</option>
+                  <option value={1}>1 - Bad</option>
+                </select>
+              </div>
+
+              <div className="field">
+                <label className="text-label" htmlFor="review-comment">
+                  Comment
+                </label>
+                <textarea
+                  className="input min-h-24"
+                  id="review-comment"
+                  value={reviewComment}
+                  onChange={(event) => setReviewComment(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                className="btn border border-gray-200 bg-white text-gray-800 sm:flex-1"
+                type="button"
+                onClick={() => setReviewBooking(null)}
+                disabled={reviewLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary sm:flex-1"
+                type="button"
+                onClick={handleSubmitReview}
+                disabled={reviewLoading}
+              >
+                {reviewLoading ? "Submitting..." : "Submit review"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -319,4 +446,12 @@ function formatDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function formatRating(averageRating: number, reviewCount: number) {
+  if (!reviewCount) {
+    return "No ratings yet";
+  }
+
+  return `${Number(averageRating).toFixed(1)}/5 (${reviewCount})`;
 }
