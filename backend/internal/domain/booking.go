@@ -24,6 +24,8 @@ type BookingRideSummary struct {
 	DepartureDate time.Time
 	Price         float64
 	Status        string
+	AverageRating float64
+	ReviewCount   int
 }
 
 // BookingRepository defines data access for user bookings.

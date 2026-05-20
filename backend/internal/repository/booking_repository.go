@@ -33,10 +33,14 @@ func (r *bookingRepository) ListByUserID(ctx context.Context, userID int64) ([]*
 			rd.destination,
 			rd.departure_date,
 			rd.price_per_seat,
-			rd.status
+			rd.status,
+			COALESCE(ROUND(AVG(rv.rating)::numeric, 1), 0)::float8 AS average_rating,
+			COUNT(rv.id)::int AS review_count
 		FROM bookings b
 		INNER JOIN ride rd ON rd.id = b.ride_id
+		LEFT JOIN reviews rv ON rv.ride_id = rd.id
 		WHERE b.user_id = $1
+		GROUP BY b.id, rd.id
 		ORDER BY b.created_at DESC`,
 		userID,
 	)
@@ -61,6 +65,8 @@ func (r *bookingRepository) ListByUserID(ctx context.Context, userID int64) ([]*
 			&booking.Ride.DepartureDate,
 			&booking.Ride.Price,
 			&booking.Ride.Status,
+			&booking.Ride.AverageRating,
+			&booking.Ride.ReviewCount,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan user booking: %w", err)
 		}
@@ -132,10 +138,14 @@ func (r *bookingRepository) GetByID(ctx context.Context, bookingID int64) (*doma
 			rd.destination,
 			rd.departure_date,
 			rd.price_per_seat,
-			rd.status
+			rd.status,
+			COALESCE(ROUND(AVG(rv.rating)::numeric, 1), 0)::float8 AS average_rating,
+			COUNT(rv.id)::int AS review_count
 		FROM bookings b
 		INNER JOIN ride rd ON rd.id = b.ride_id
-		WHERE b.id = $1`,
+		LEFT JOIN reviews rv ON rv.ride_id = rd.id
+		WHERE b.id = $1
+		GROUP BY b.id, rd.id`,
 		bookingID,
 	).Scan(
 		&booking.ID,
@@ -150,6 +160,8 @@ func (r *bookingRepository) GetByID(ctx context.Context, bookingID int64) (*doma
 		&booking.Ride.DepartureDate,
 		&booking.Ride.Price,
 		&booking.Ride.Status,
+		&booking.Ride.AverageRating,
+		&booking.Ride.ReviewCount,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

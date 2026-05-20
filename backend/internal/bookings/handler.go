@@ -178,13 +178,15 @@ func mapBookingsResponse(bookings []*domain.Booking) []gin.H {
 			"status":        booking.Status,
 			"createdAt":     booking.CreatedAt,
 			"ride": gin.H{
-				"id":          booking.Ride.ID,
-				"route":       booking.Ride.Origin + " → " + booking.Ride.Destination,
-				"origin":      booking.Ride.Origin,
-				"destination": booking.Ride.Destination,
-				"date":        booking.Ride.DepartureDate,
-				"price":       booking.Ride.Price,
-				"status":      booking.Ride.Status,
+				"id":            booking.Ride.ID,
+				"route":         booking.Ride.Origin + " → " + booking.Ride.Destination,
+				"origin":        booking.Ride.Origin,
+				"destination":   booking.Ride.Destination,
+				"date":          booking.Ride.DepartureDate,
+				"price":         booking.Ride.Price,
+				"status":        booking.Ride.Status,
+				"averageRating": booking.Ride.AverageRating,
+				"reviewCount":   booking.Ride.ReviewCount,
 			},
 		})
 	}
