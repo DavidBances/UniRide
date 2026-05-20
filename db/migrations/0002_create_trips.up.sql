@@ -1,4 +1,4 @@
-CREATE TABLE trips (
+CREATE TABLE ride (
     id SERIAL PRIMARY KEY,
     driver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     origin TEXT NOT NULL,
@@ -10,6 +10,6 @@ CREATE TABLE trips (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_trips_status_departure_date ON trips(status, departure_date);
-CREATE INDEX idx_trips_origin_lower ON trips(LOWER(origin));
-CREATE INDEX idx_trips_destination_lower ON trips(LOWER(destination));
+CREATE INDEX idx_ride_status_departure_date ON ride(status, departure_date);
+CREATE INDEX idx_ride_origin_lower ON ride(LOWER(origin));
+CREATE INDEX idx_ride_destination_lower ON ride(LOWER(destination));

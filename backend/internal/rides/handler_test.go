@@ -2,6 +2,7 @@ package rides
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -109,6 +110,73 @@ func TestListRidesAppliesFilters(t *testing.T) {
 	}
 }
 
+func TestGetRideByIDReturnsRideDetails(t *testing.T) {
+	router, repo := setupRideRouter(t)
+	repo.detail = &domain.RideDetails{
+		ID:             99,
+		DriverID:       42,
+		Origin:         "Madrid",
+		Destination:    "Barcelona",
+		DepartureDate:  time.Date(2099, 5, 20, 8, 30, 0, 0, time.UTC),
+		AvailableSeats: 3,
+		PricePerSeat:   12.5,
+		Status:         "open",
+		CreatedAt:      time.Now(),
+		Driver: domain.RideDriver{
+			ID:        42,
+			Username:  "driver42",
+			Email:     "driver42@uni.es",
+			CreatedAt: time.Now(),
+		},
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/rides/99", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+
+	ride, ok := payload["ride"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected ride payload, got %+v", payload)
+	}
+
+	if ride["origin"] != "Madrid" || ride["destination"] != "Barcelona" {
+		t.Fatalf("unexpected ride payload: %+v", ride)
+	}
+
+	driver, ok := ride["driver"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected driver payload, got %+v", ride)
+	}
+
+	if driver["username"] != "driver42" {
+		t.Fatalf("unexpected driver payload: %+v", driver)
+	}
+}
+
+func TestGetRideByIDReturns404WhenMissing(t *testing.T) {
+	router, repo := setupRideRouter(t)
+	repo.detailErr = domain.ErrRideNotFound
+
+	request := httptest.NewRequest(http.MethodGet, "/rides/123", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusNotFound, response.Code, response.Body.String())
+	}
+}
+
 func setupRideRouter(t *testing.T) (*gin.Engine, *fakeTripRepository) {
 	t.Helper()
 
@@ -142,8 +210,10 @@ func testToken(t *testing.T, userID int64) string {
 }
 
 type fakeTripRepository struct {
-	created *domain.Trip
-	filters domain.TripFilters
+	created   *domain.Trip
+	detail    *domain.RideDetails
+	detailErr error
+	filters   domain.TripFilters
 }
 
 func (r *fakeTripRepository) Create(_ context.Context, trip *domain.Trip) error {
@@ -156,6 +226,14 @@ func (r *fakeTripRepository) Create(_ context.Context, trip *domain.Trip) error 
 
 func (r *fakeTripRepository) GetByID(_ context.Context, _ int64) (*domain.Trip, error) {
 	return nil, nil
+}
+
+func (r *fakeTripRepository) GetRideDetailsByID(_ context.Context, _ int64) (*domain.RideDetails, error) {
+	if r.detailErr != nil {
+		return nil, r.detailErr
+	}
+
+	return r.detail, nil
 }
 
 func (r *fakeTripRepository) ListOpenTrips(_ context.Context, filters domain.TripFilters) ([]*domain.Trip, error) {

@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getStoredToken } from "./authToken";
 import Login from "./Login";
+import ProfilePage from "./ProfilePage";
 import Register from "./Register";
 import RidesPage from "./RidesPage";
-import SessionPlaceholder from "./SessionPlaceholder";
 
 const pageTitles: Record<string, string> = {
   "/": "UniRide",
@@ -66,9 +66,9 @@ function renderPage(path: string, hasToken: boolean) {
         />
       );
     case "/profile":
-      return <SessionPlaceholder />;
+      return <ProfilePage />;
     case "/placeholder":
-      return <SessionPlaceholder />;
+      return <ProfilePage />;
     default:
       return <NotFoundPage />;
   }

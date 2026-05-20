@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api";
+import { getStoredToken } from "./authToken";
 
 type Ride = {
   id: number;
@@ -37,8 +38,13 @@ export default function RidesPage() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
+  const [seatsToReserve, setSeatsToReserve] = useState(1);
+  const [reservationLoading, setReservationLoading] = useState(false);
+  const [reservationError, setReservationError] = useState("");
 
   const queryString = useMemo(() => buildRideQuery(appliedFilters), [appliedFilters]);
+  const token = getStoredToken();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -85,6 +91,51 @@ export default function RidesPage() {
   const resetFilters = () => {
     setFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
+  };
+
+  const handleReserveClick = (ride: Ride) => {
+    if (!token) {
+      setError("Debes iniciar sesión para reservar.");
+      return;
+    }
+    setSelectedRide(ride);
+    setSeatsToReserve(1);
+    setReservationError("");
+  };
+
+  const handleConfirmReservation = async () => {
+    if (!selectedRide || !token) return;
+
+    setReservationLoading(true);
+    setReservationError("");
+
+    try {
+      const response = await fetch(apiUrl("/api/bookings"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rideId: selectedRide.id,
+          seatsReserved: seatsToReserve,
+        }),
+      });
+
+      const data = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        setReservationError(data.error ?? "No se pudo hacer la reserva.");
+        return;
+      }
+
+      setSelectedRide(null);
+      setReservationError("");
+    } catch (error) {
+      setReservationError("Error de conexión al servidor.");
+    } finally {
+      setReservationLoading(false);
+    }
   };
 
   const hasActiveFilters = queryString !== "";
@@ -182,7 +233,7 @@ export default function RidesPage() {
                   {ride.status}
                 </span>
               </div>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
+              <dl className="grid grid-cols-2 gap-3 text-sm mb-4">
                 <div>
                   <dt className="text-label">Seats</dt>
                   <dd className="font-bold">{ride.availableSeats}</dd>
@@ -192,8 +243,95 @@ export default function RidesPage() {
                   <dd className="font-bold">{Number(ride.price).toFixed(2)} EUR</dd>
                 </div>
               </dl>
+              <button
+                className="btn btn-primary w-full"
+                type="button"
+                onClick={() => handleReserveClick(ride)}
+              >
+                Reservar
+              </button>
             </article>
           ))}
+        </div>
+      )}
+
+      {selectedRide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="rounded-lg bg-white p-6 shadow-lg max-w-md w-full mx-4">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              Reservar viaje
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {selectedRide.origin} → {selectedRide.destination}
+            </p>
+
+            {reservationError && (
+              <p className="message message-error mb-4">{reservationError}</p>
+            )}
+
+            <div className="mb-6">
+              <label className="text-label" htmlFor="seats-input">
+                Número de pasajeros
+              </label>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  className="btn border border-gray-200 bg-white text-gray-700 px-3"
+                  onClick={() => setSeatsToReserve(Math.max(1, seatsToReserve - 1))}
+                  disabled={seatsToReserve <= 1}
+                >
+                  −
+                </button>
+                <input
+                  id="seats-input"
+                  type="number"
+                  min="1"
+                  max={selectedRide.availableSeats}
+                  value={seatsToReserve}
+                  onChange={(e) => {
+                    const value = Math.min(
+                      selectedRide.availableSeats,
+                      Math.max(1, parseInt(e.target.value) || 1)
+                    );
+                    setSeatsToReserve(value);
+                  }}
+                  className="input flex-1 text-center"
+                />
+                <button
+                  type="button"
+                  className="btn border border-gray-200 bg-white text-gray-700 px-3"
+                  onClick={() =>
+                    setSeatsToReserve(Math.min(selectedRide.availableSeats, seatsToReserve + 1))
+                  }
+                  disabled={seatsToReserve >= selectedRide.availableSeats}
+                >
+                  +
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Asientos disponibles: {selectedRide.availableSeats}
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                className="btn border border-gray-200 bg-white text-gray-700 flex-1"
+                type="button"
+                onClick={() => setSelectedRide(null)}
+                disabled={reservationLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary flex-1"
+                type="button"
+                onClick={handleConfirmReservation}
+                disabled={reservationLoading}
+              >
+                {reservationLoading ? "Reservando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>
