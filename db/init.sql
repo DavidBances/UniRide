@@ -24,6 +24,27 @@ CREATE TABLE IF NOT EXISTS ride (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_trips_status_departure_date ON trips(status, departure_date);
+CREATE INDEX IF NOT EXISTS idx_trips_origin_lower ON trips(LOWER(origin));
+CREATE INDEX IF NOT EXISTS idx_trips_destination_lower ON trips(LOWER(destination));
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id SERIAL PRIMARY KEY,
+    ride_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    seats_reserved INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'confirmed',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bookings_ride
+        FOREIGN KEY (ride_id) REFERENCES trips(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bookings_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_bookings_ride_user
+        UNIQUE (ride_id, user_id),
+    CONSTRAINT chk_bookings_seats_reserved
+        CHECK (seats_reserved > 0),
+    CONSTRAINT chk_bookings_status
+        CHECK (status IN ('pending', 'confirmed', 'cancelled'))
 CREATE INDEX IF NOT EXISTS idx_ride_status_departure_date ON ride(status, departure_date);
 CREATE INDEX IF NOT EXISTS idx_ride_origin_lower ON ride(LOWER(origin));
 CREATE INDEX IF NOT EXISTS idx_ride_destination_lower ON ride(LOWER(destination));
