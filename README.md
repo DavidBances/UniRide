@@ -286,10 +286,22 @@ The repository includes `render.yaml` for a Render-based public deployment:
 - Frontend: Render Static Site built from `frontend/`.
 - Database: Render PostgreSQL.
 
+Render is the selected hosting platform for Sprint 5. The frontend service is configured as a static site and includes a `/* -> /index.html` rewrite so React Router pages such as `/profile`, `/rides` and `/login` continue working after a browser refresh.
+
 Set these production variables in Render, without committing real secrets:
 
 - Backend: `JWT_SECRET`, `CORS_ALLOW_ORIGIN`, `GIN_MODE=release`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE=require`.
 - Frontend: `VITE_API_BASE_URL` with the public backend URL, for example `https://uniride-backend.onrender.com`.
+
+Expected public URLs when using the service names from `render.yaml`:
+
+- Frontend: `https://uniride-frontend.onrender.com`
+- Backend: `https://uniride-backend.onrender.com`
+
+Set the cross-service values after Render creates the services:
+
+- Frontend `VITE_API_BASE_URL=https://uniride-backend.onrender.com`
+- Backend `CORS_ALLOW_ORIGIN=https://uniride-frontend.onrender.com`
 
 After provisioning the database, apply the SQL schema from `db/init.sql` or the migration files in `db/migrations/` using the provider SQL console or `psql`. Then verify:
 
@@ -297,6 +309,8 @@ After provisioning the database, apply the SQL schema from `db/init.sql` or the 
 2. Frontend opens publicly.
 3. Frontend requests go to the public backend URL.
 4. `CORS_ALLOW_ORIGIN` matches the public frontend URL.
+5. Direct refresh works for `/login`, `/rides` and `/profile`.
+6. Mobile and desktop layouts are readable in the public frontend URL.
 
 ## Quick Verification Checklist
 

@@ -4,6 +4,7 @@ services:
     runtime: go
     buildCommand: go build -o backend/bin/server ./backend/cmd/server
     startCommand: ./backend/bin/server
+    healthCheckPath: /health
     envVars:
       - key: GIN_MODE
         value: release
@@ -40,6 +41,10 @@ services:
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
