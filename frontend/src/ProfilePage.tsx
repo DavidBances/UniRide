@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "./api";
 import { clearStoredToken, getStoredToken } from "./authToken";
-import "./Login.css";
 
 type User = {
   id: number;
@@ -10,7 +10,7 @@ type User = {
 };
 
 type MeResponse = {
-  user: User;
+  user?: User;
 };
 
 type Booking = {
@@ -35,22 +35,23 @@ type BookingsResponse = {
 };
 
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
-  const token = getStoredToken();
 
   useEffect(() => {
+    const token = getStoredToken();
     if (!token) {
-      window.location.replace("/login");
+      navigate("/login", { replace: true });
       return;
     }
 
     const controller = new AbortController();
 
-    const loadProfile = async () => {
+    const loadDashboard = async () => {
       setLoading(true);
       setError("");
 
@@ -69,6 +70,10 @@ export default function ProfilePage() {
         }
 
         const meData = (await meResponse.json()) as MeResponse;
+        if (!meData.user) {
+          throw new Error("missing user");
+        }
+
         setUser(meData.user);
 
         if (bookingsResponse.ok) {
@@ -83,7 +88,7 @@ export default function ProfilePage() {
         }
 
         clearStoredToken();
-        setError("No se pudo cargar tu perfil. Inicia sesión de nuevo.");
+        setError("No se pudo cargar tu perfil. Vuelve a iniciar sesion.");
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -91,25 +96,27 @@ export default function ProfilePage() {
       }
     };
 
-    void loadProfile();
+    void loadDashboard();
 
     return () => controller.abort();
-  }, [token]);
+  }, [navigate]);
 
-  const upcomingBookings = useMemo(
-    () => bookings.filter((booking) => new Date(booking.ride.date).getTime() >= Date.now()).length,
-    [bookings]
-  );
+  const stats = useMemo(() => buildStats(bookings), [bookings]);
 
   const handleLogout = () => {
     clearStoredToken();
-    window.location.replace("/");
+    navigate("/login", { replace: true });
   };
 
   const handleDeleteBooking = async (bookingId: number) => {
-    if (!token) return;
+    const token = getStoredToken();
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
     setDeletingBookingId(bookingId);
+    setError("");
 
     try {
       const response = await fetch(apiUrl(`/api/bookings/${bookingId}`), {
@@ -121,13 +128,13 @@ export default function ProfilePage() {
 
       if (!response.ok) {
         const data = (await response.json()) as { error?: string };
-        setError(data.error ?? "No se pudo eliminar la reserva.");
+        setError(data.error ?? "No se pudo cancelar la reserva.");
         return;
       }
 
-      setBookings((current) => current.filter((b) => b.id !== bookingId));
-    } catch (err) {
-      setError("Error de conexión al intentar eliminar la reserva.");
+      setBookings((current) => current.filter((booking) => booking.id !== bookingId));
+    } catch {
+      setError("Error de conexion al intentar cancelar la reserva.");
     } finally {
       setDeletingBookingId(null);
     }
@@ -137,8 +144,9 @@ export default function ProfilePage() {
     return (
       <section className="w-full py-6">
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-label">Verificando sesión</p>
-          <h1 className="text-title">Cargando perfil</h1>
+          <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
+          <h1 className="mt-2 text-2xl font-bold text-gray-950">Loading your dashboard</h1>
+          <p className="mt-2 text-gray-600">Checking your session and latest bookings.</p>
         </div>
       </section>
     );
@@ -147,12 +155,12 @@ export default function ProfilePage() {
   if (error || !user) {
     return (
       <section className="w-full py-6">
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h1 className="text-title">No se pudo cargar el perfil</h1>
-          <p className="message message-error mt-3">{error || "Usuario no autenticado."}</p>
-          <button className="btn btn-primary mt-4" type="button" onClick={() => window.location.replace("/login")}>
-            Ir a login
-          </button>
+        <div className="rounded-lg border border-red-100 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-950">Profile unavailable</h1>
+          <p className="mt-2 text-red-700">{error || "No se pudo cargar tu perfil."}</p>
+          <Link className="btn btn-primary mt-5 inline-flex" to="/login">
+            Login
+          </Link>
         </div>
       </section>
     );
@@ -160,99 +168,145 @@ export default function ProfilePage() {
 
   return (
     <section className="w-full py-6">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-label">Perfil</p>
-          <h1 className="text-title">Hola, {user.username}</h1>
-          <p className="text-gray-600">{user.email}</p>
+          <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
+          <h1 className="mt-2 text-3xl font-bold text-gray-950">Welcome, {user.username}</h1>
+          <p className="mt-2 text-gray-600">Manage your rides, reservations and account access from one place.</p>
         </div>
-        <button className="btn btn-primary md:w-auto" type="button" onClick={handleLogout}>
-          Logout
-        </button>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <a className="btn border border-gray-200 bg-white text-gray-800" href="#my-bookings">
+            My bookings
+          </a>
+          <a className="btn border border-gray-200 bg-white text-gray-800" href="#my-rides">
+            My rides
+          </a>
+          <button className="btn btn-primary" type="button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <StatCard label="My bookings" value={bookings.length.toString()} />
-        <StatCard label="Upcoming bookings" value={upcomingBookings.toString()} />
-        {/* TODO: Connect this stat when a GET /api/me/rides or equivalent endpoint exists. */}
-        <StatCard label="My rides" value="Pending" />
+      {error && <p className="message message-error mb-4">{error}</p>}
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+        <aside className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-950">Basic info</h2>
+          <dl className="mt-4 grid gap-4">
+            <ProfileField label="Username" value={user.username} />
+            <ProfileField label="Email" value={user.email} />
+            <ProfileField label="Account status" value="Authenticated" />
+          </dl>
+        </aside>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {stats.map((stat) => (
+            <article className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm" key={stat.label}>
+              <p className="text-sm font-semibold text-gray-500">{stat.label}</p>
+              <p className="mt-3 text-3xl font-bold text-gray-950">{stat.value}</p>
+              <p className="mt-2 text-sm text-gray-600">{stat.caption}</p>
+            </article>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <section id="my-bookings" className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">My bookings</h2>
-              <p className="text-sm text-gray-600">Reservas hechas con tu cuenta.</p>
+              <h2 className="text-xl font-bold text-gray-950">My bookings</h2>
+              <p className="text-sm text-gray-600">Your latest passenger reservations.</p>
             </div>
-            <a className="btn border border-gray-200 bg-white text-gray-700" href="#my-bookings">
-              My bookings
-            </a>
+            <Link className="text-sm font-bold text-teal-700 hover:underline" to="/rides">
+              Find rides
+            </Link>
           </div>
 
-          <div id="my-bookings" className="grid gap-3">
-            {bookings.length === 0 ? (
-              <p className="rounded-lg bg-gray-50 p-4 text-gray-600">Aún no tienes reservas.</p>
-            ) : (
-              bookings.map((booking) => (
-                <article className="rounded-lg border border-gray-200 p-4" key={booking.id}>
-                  <div className="mb-2 flex items-start justify-between gap-4">
+          {bookings.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-gray-300 p-4 text-gray-600">
+              You do not have bookings yet.
+            </p>
+          ) : (
+            <div className="grid gap-3">
+              {bookings.slice(0, 3).map((booking) => (
+                <article className="rounded-lg border border-gray-100 bg-gray-50 p-4" key={booking.id}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="font-bold text-gray-900">{booking.ride.route}</h3>
-                      <p className="text-sm text-gray-600">{formatDate(booking.ride.date)}</p>
+                      <h3 className="font-bold text-gray-950">{booking.ride.route}</h3>
+                      <p className="mt-1 text-sm text-gray-600">{formatDate(booking.ride.date)}</p>
                     </div>
-                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700">
+                    <span className="w-fit rounded-md bg-teal-50 px-2 py-1 text-sm font-bold text-teal-700">
                       {booking.status}
                     </span>
                   </div>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm text-gray-700">
-                      {booking.seatsReserved} seats · {Number(booking.ride.price).toFixed(2)} EUR
-                    </p>
-                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <ProfileField label="Seats" value={String(booking.seatsReserved)} />
+                    <ProfileField label="Price" value={`${Number(booking.ride.price).toFixed(2)} EUR`} />
+                  </dl>
                   <button
-                    className="btn border border-red-200 bg-red-50 text-red-700 w-full text-sm"
+                    className="btn mt-4 w-full border border-red-200 bg-red-50 text-sm text-red-700"
                     type="button"
                     onClick={() => handleDeleteBooking(booking.id)}
                     disabled={deletingBookingId === booking.id}
                   >
-                    {deletingBookingId === booking.id ? "Eliminando..." : "Cancel booking"}
+                    {deletingBookingId === booking.id ? "Cancelling..." : "Cancel booking"}
                   </button>
                 </article>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        <aside className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">Navigation</h2>
-          <div className="mt-4 grid gap-3">
-            <a className="btn border border-gray-200 bg-white text-gray-700" href="#my-bookings">
-              My bookings
-            </a>
-            <button className="btn border border-gray-200 bg-gray-50 text-gray-500" type="button" disabled>
-              My rides
-            </button>
-            <button className="btn btn-primary" type="button" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-          <p className="mt-4 text-sm text-gray-500">
-            TODO: habilitar My rides cuando exista un endpoint para viajes publicados por el usuario.
+        <section id="my-rides" className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-950">My rides</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Publish a ride or review the public rides list while personal ride management is completed.
           </p>
-        </aside>
+          <div className="mt-5 grid gap-3">
+            <Link className="btn btn-primary text-center" to="/create-ride">
+              Publish ride
+            </Link>
+            <Link className="btn border border-gray-200 bg-white text-center text-gray-800" to="/rides">
+              Browse rides
+            </Link>
+          </div>
+        </section>
       </div>
     </section>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function ProfileField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-label">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
+    <div>
+      <dt className="text-label">{label}</dt>
+      <dd className="mt-1 break-words font-bold text-gray-950">{value}</dd>
     </div>
   );
+}
+
+function buildStats(bookings: Booking[]) {
+  const activeBookings = bookings.filter((booking) => booking.status !== "cancelled").length;
+  const reservedSeats = bookings.reduce((total, booking) => total + booking.seatsReserved, 0);
+
+  return [
+    {
+      label: "Bookings",
+      value: String(bookings.length),
+      caption: "Total reservations",
+    },
+    {
+      label: "Active",
+      value: String(activeBookings),
+      caption: "Ready or pending",
+    },
+    {
+      label: "Seats",
+      value: String(reservedSeats),
+      caption: "Reserved seats",
+    },
+  ];
 }
 
 function formatDate(value: string) {
