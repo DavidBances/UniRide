@@ -1,12 +1,11 @@
 .auth-page {
-  /* Use the surrounding page background (LoginPage). Keep layout only. */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
+  padding: var(--space-6) 0;
   background: transparent;
   width: 100%;
-  height: 100%;
+  min-height: calc(100vh - 12rem);
 }
 
 .auth-card {
@@ -19,6 +18,7 @@
 .auth-session-card {
   display: grid;
   gap: var(--space-4);
+  justify-items: start;
 }
 
 .session-kicker {
@@ -101,6 +101,10 @@
 }
 
 @media (max-width: 480px) {
+  .auth-page {
+    padding: var(--space-2) 0;
+  }
+
   .auth-card {
     padding: 1.375rem;
   }

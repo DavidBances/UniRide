@@ -60,6 +60,7 @@ body {
 	font-size: var(--text-md);
 	line-height: 1.45;
 	color: var(--color-text);
+	background: #f8fafc;
 	text-rendering: optimizeLegibility;
 }
 
@@ -88,6 +89,25 @@ select {
 	outline-offset: 1px;
 }
 
+.skip-link {
+	position: fixed;
+	top: var(--space-3);
+	left: var(--space-3);
+	z-index: 100;
+	transform: translateY(-150%);
+	border-radius: var(--radius-sm);
+	background: #fff;
+	color: var(--color-brand-600);
+	padding: var(--space-2) var(--space-3);
+	font-weight: 700;
+	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+	transition: transform 0.2s ease;
+}
+
+.skip-link:focus {
+	transform: translateY(0);
+}
+
 .stack {
 	display: flex;
 	flex-direction: column;
@@ -98,7 +118,7 @@ select {
 	font-size: var(--text-xl);
 	font-weight: 700;
 	line-height: 1.15;
-	letter-spacing: -0.02em;
+	letter-spacing: 0;
 }
 
 .text-label {
@@ -134,6 +154,10 @@ select {
 }
 
 .btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
 	border: 0;
 	border-radius: var(--radius-sm);
 	padding: var(--space-3) var(--space-4);
@@ -147,6 +171,11 @@ select {
 	opacity: 0.7;
 	cursor: not-allowed;
 	transform: none;
+}
+
+.btn:focus-visible,
+.input:focus-visible {
+	outline-offset: 3px;
 }
 
 .btn-primary {
@@ -179,6 +208,58 @@ select {
 
 .message-success {
 	color: var(--color-success-500);
+}
+
+.loading-panel,
+.empty-state {
+	width: 100%;
+	border: 1px solid #e5e7eb;
+	border-radius: var(--radius-sm);
+	background: #fff;
+	padding: var(--space-6);
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.loading-panel {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+}
+
+.loading-spinner,
+.button-spinner {
+	display: inline-block;
+	flex: 0 0 auto;
+	border-radius: 999px;
+	border: 3px solid rgba(15, 116, 146, 0.18);
+	border-top-color: var(--color-brand-500);
+	animation: spin 0.8s linear infinite;
+}
+
+.loading-spinner {
+	width: 2rem;
+	height: 2rem;
+}
+
+.button-spinner {
+	width: 1rem;
+	height: 1rem;
+	border-width: 2px;
+	border-color: rgba(255, 255, 255, 0.45);
+	border-top-color: #fff;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (max-width: 640px) {
+	.loading-panel,
+	.empty-state {
+		padding: var(--space-4);
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

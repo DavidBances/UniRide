@@ -152,18 +152,19 @@ export default function Login() {
 
   if (hydratingSession) {
     return (
-      <main className="auth-page">
+      <section className="auth-page" aria-busy="true">
         <section className="card auth-card auth-session-card">
           <p className="session-kicker">Verificando sesión</p>
           <h1 className="text-title">Restaurando acceso seguro</h1>
+          <span className="loading-spinner" aria-hidden="true" />
           <p className="session-copy">Comprobando si existe un token válido antes de mostrar el formulario.</p>
         </section>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="auth-page">
+    <section className="auth-page">
       <form className="card auth-card auth-form" onSubmit={handleSubmit}>
         <h1 className="text-title">{mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</h1>
 
@@ -176,6 +177,7 @@ export default function Login() {
               className="input"
               id="username"
               type="text"
+              autoComplete="username"
               placeholder="tu_usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -191,6 +193,7 @@ export default function Login() {
             className="input"
             id="email"
             type="email"
+            autoComplete="email"
             placeholder="tuemail@uni.es"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -205,6 +208,7 @@ export default function Login() {
             className="input"
             id="password"
             type="password"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -215,6 +219,7 @@ export default function Login() {
         {ok && <p className="message message-success">{ok}</p>}
 
         <button className="btn btn-primary auth-submit" type="submit" disabled={loading}>
+          {loading && <span className="button-spinner" aria-hidden="true" />}
           {loading
             ? mode === "login"
               ? "Entrando..."
@@ -231,6 +236,6 @@ export default function Login() {
           </button>
         </p>
       </form>
-    </main>
+    </section>
   );
 }
