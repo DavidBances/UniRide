@@ -44,6 +44,7 @@ export default function RidesPage() {
   const [seatsToReserve, setSeatsToReserve] = useState(1);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [reservationError, setReservationError] = useState("");
+  const [reservationSuccess, setReservationSuccess] = useState("");
 
   const queryString = useMemo(() => buildRideQuery(appliedFilters), [appliedFilters]);
   const token = getStoredToken();
@@ -103,6 +104,7 @@ export default function RidesPage() {
     setSelectedRide(ride);
     setSeatsToReserve(1);
     setReservationError("");
+    setReservationSuccess("");
   };
 
   const handleConfirmReservation = async () => {
@@ -110,6 +112,7 @@ export default function RidesPage() {
 
     setReservationLoading(true);
     setReservationError("");
+    setReservationSuccess("");
 
     try {
       const response = await fetch(apiUrl("/api/bookings"), {
@@ -131,6 +134,17 @@ export default function RidesPage() {
         return;
       }
 
+      setRides((current) =>
+        current.map((ride) =>
+          ride.id === selectedRide.id
+            ? {
+                ...ride,
+                availableSeats: Math.max(0, ride.availableSeats - seatsToReserve),
+              }
+            : ride
+        )
+      );
+      setReservationSuccess(data.message ?? "Reserva confirmada correctamente.");
       setSelectedRide(null);
       setReservationError("");
     } catch {
@@ -149,7 +163,7 @@ export default function RidesPage() {
         <p className="text-gray-600">Busca viajes publicados por origen, destino, fecha y plazas.</p>
       </div>
 
-      <form className="mb-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={handleSubmit}>
+      <form className="mb-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-5" onSubmit={handleSubmit}>
         <div className="field">
           <label className="text-label" htmlFor="ride-origin">
             Origin
@@ -158,6 +172,7 @@ export default function RidesPage() {
             className="input"
             id="ride-origin"
             type="text"
+            placeholder="Madrid"
             value={filters.origin}
             onChange={(event) => setFilters((current) => ({ ...current, origin: event.target.value }))}
           />
@@ -171,6 +186,7 @@ export default function RidesPage() {
             className="input"
             id="ride-destination"
             type="text"
+            placeholder="Barcelona"
             value={filters.destination}
             onChange={(event) => setFilters((current) => ({ ...current, destination: event.target.value }))}
           />
@@ -197,6 +213,7 @@ export default function RidesPage() {
             className="input"
             id="ride-seats"
             min="1"
+            inputMode="numeric"
             type="number"
             value={filters.availableSeats}
             onChange={(event) => setFilters((current) => ({ ...current, availableSeats: event.target.value }))}
@@ -214,12 +231,26 @@ export default function RidesPage() {
       </form>
 
       {error && <p className="message message-error mb-4">{error}</p>}
+      {reservationSuccess && <p className="message message-success mb-4">{reservationSuccess}</p>}
       {!error && hasActiveFilters && <p className="message mb-4 text-gray-600">Resultados filtrados</p>}
 
       {loading ? (
-        <p className="text-gray-600">Cargando viajes...</p>
+        <div className="loading-panel" aria-busy="true">
+          <span className="loading-spinner" aria-hidden="true" />
+          <p className="text-gray-600">Cargando viajes...</p>
+        </div>
       ) : rides.length === 0 && !error ? (
-        <p className="rounded-lg border border-gray-200 bg-white p-4 text-gray-600">No hay viajes disponibles.</p>
+        <div className="empty-state">
+          <h2 className="text-lg font-bold text-gray-950">No hay viajes disponibles.</h2>
+          <p className="mt-2 text-gray-600">
+            Prueba con otros filtros o vuelve más tarde para ver nuevos trayectos.
+          </p>
+          {hasActiveFilters && (
+            <button className="btn border border-gray-200 bg-white text-gray-700 mt-4" type="button" onClick={resetFilters}>
+              Limpiar filtros
+            </button>
+          )}
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {rides.map((ride) => (
@@ -253,9 +284,9 @@ export default function RidesPage() {
                 className="btn btn-primary w-full"
                 type="button"
                 onClick={() => handleReserveClick(ride)}
-                disabled={ride.status !== "open"}
+                disabled={ride.status !== "open" || ride.availableSeats <= 0}
               >
-                {ride.status === "open" ? "Reservar" : "Completed ride"}
+                {ride.status !== "open" ? "Completed ride" : ride.availableSeats <= 0 ? "No seats left" : "Reservar"}
               </button>
             </article>
           ))}
@@ -263,10 +294,10 @@ export default function RidesPage() {
       )}
 
       {selectedRide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="rounded-lg bg-white p-6 shadow-lg max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="reserve-title">
+          <div className="max-h-full w-full max-w-md overflow-auto rounded-lg bg-white p-6 shadow-lg">
             <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Reservar viaje
+              <span id="reserve-title">Reservar viaje</span>
             </h2>
             <p className="text-sm text-gray-600 mb-4">
               {selectedRide.origin} → {selectedRide.destination}
@@ -293,6 +324,7 @@ export default function RidesPage() {
                   id="seats-input"
                   type="number"
                   min="1"
+                  inputMode="numeric"
                   max={selectedRide.availableSeats}
                   value={seatsToReserve}
                   onChange={(e) => {
@@ -335,6 +367,7 @@ export default function RidesPage() {
                 onClick={handleConfirmReservation}
                 disabled={reservationLoading}
               >
+                {reservationLoading && <span className="button-spinner" aria-hidden="true" />}
                 {reservationLoading ? "Reservando..." : "Confirmar"}
               </button>
             </div>

@@ -142,6 +142,7 @@ export default function Register() {
         {ok && <p className="message message-success">{ok}</p>}
 
         <button className="btn btn-primary auth-submit" type="submit" disabled={loading}>
+          {loading && <span className="button-spinner" aria-hidden="true" />}
           {loading ? "Registrando..." : "Registrarse"}
         </button>
       </form>

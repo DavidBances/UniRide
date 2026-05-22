@@ -5,7 +5,6 @@ import "./index.css";
 import AuthPage from "./AuthPage";
 import Login from "./Login";
 import Register from "./Register";
-import Layout from "./components/Layout";
 import App from "./App";
 
 createRoot(document.getElementById("root")!).render(
@@ -28,14 +27,7 @@ createRoot(document.getElementById("root")!).render(
             </AuthPage>
           }
         />
-        <Route
-          path="*"
-          element={
-            <Layout>
-              <App />
-            </Layout>
-          }
-        />
+        <Route path="*" element={<App />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>

@@ -195,10 +195,11 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <section className="w-full py-6">
+      <section className="w-full py-6" aria-busy="true">
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
           <h1 className="mt-2 text-2xl font-bold text-gray-950">Loading your dashboard</h1>
+          <span className="loading-spinner mt-4" aria-hidden="true" />
           <p className="mt-2 text-gray-600">Checking your session and latest bookings.</p>
         </div>
       </section>
@@ -277,9 +278,13 @@ export default function ProfilePage() {
           </div>
 
           {bookings.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-gray-300 p-4 text-gray-600">
-              You do not have bookings yet.
-            </p>
+            <div className="rounded-lg border border-dashed border-gray-300 p-4">
+              <p className="font-bold text-gray-950">You do not have bookings yet.</p>
+              <p className="mt-1 text-sm text-gray-600">Find an open ride and reserve your first seat.</p>
+              <Link className="btn btn-primary mt-4" to="/rides">
+                Find rides
+              </Link>
+            </div>
           ) : (
             <div className="grid gap-3">
               {bookings.slice(0, 3).map((booking) => (
@@ -314,6 +319,7 @@ export default function ProfilePage() {
                       onClick={() => handleDeleteBooking(booking.id)}
                       disabled={deletingBookingId === booking.id}
                     >
+                      {deletingBookingId === booking.id && <span className="button-spinner border-red-200 border-t-red-700" aria-hidden="true" />}
                       {deletingBookingId === booking.id ? "Cancelling..." : "Cancel booking"}
                     </button>
                   </div>
@@ -340,9 +346,9 @@ export default function ProfilePage() {
       </div>
 
       {reviewBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-950">Rate ride</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="review-title">
+          <div className="max-h-full w-full max-w-md overflow-auto rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="text-xl font-bold text-gray-950" id="review-title">Rate ride</h2>
             <p className="mt-2 text-sm text-gray-600">{reviewBooking.ride.route}</p>
 
             {reviewError && <p className="message message-error mt-4">{reviewError}</p>}
@@ -394,6 +400,7 @@ export default function ProfilePage() {
                 onClick={handleSubmitReview}
                 disabled={reviewLoading}
               >
+                {reviewLoading && <span className="button-spinner" aria-hidden="true" />}
                 {reviewLoading ? "Submitting..." : "Submit review"}
               </button>
             </div>
