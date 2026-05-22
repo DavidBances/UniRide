@@ -46,16 +46,18 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	defer db.Close()
-
 	if cfg.RunDBMigrations {
 		if err := database.ApplySchemaFile(ctx, db, cfg.DBSchemaPath); err != nil {
 			logger.Error("failed to apply database schema", "error", err, "path", cfg.DBSchemaPath)
+			if closeErr := db.Close(); closeErr != nil {
+				logger.Error("database close error", "error", closeErr)
+			}
 			os.Exit(1)
 		}
 
 		logger.Info("database schema applied", "path", cfg.DBSchemaPath)
 	}
+	defer db.Close()
 
 	userRepository := users.NewRepository(db)
 
