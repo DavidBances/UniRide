@@ -48,6 +48,15 @@ func main() {
 	}
 	defer db.Close()
 
+	if cfg.RunDBMigrations {
+		if err := database.ApplySchemaFile(ctx, db, cfg.DBSchemaPath); err != nil {
+			logger.Error("failed to apply database schema", "error", err, "path", cfg.DBSchemaPath)
+			os.Exit(1)
+		}
+
+		logger.Info("database schema applied", "path", cfg.DBSchemaPath)
+	}
+
 	userRepository := users.NewRepository(db)
 
 	if err := users.EnsureDefaultAdmin(ctx, userRepository); err != nil {

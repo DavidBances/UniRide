@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	// PostgreSQL driver
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -25,4 +26,18 @@ func Connect(ctx context.Context, dsn string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// ApplySchemaFile executes an idempotent SQL schema file against the database.
+func ApplySchemaFile(ctx context.Context, db *sql.DB, path string) error {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read database schema file %q: %w", path, err)
+	}
+
+	if _, err := db.ExecContext(ctx, string(content)); err != nil {
+		return fmt.Errorf("failed to apply database schema file %q: %w", path, err)
+	}
+
+	return nil
 }
