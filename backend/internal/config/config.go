@@ -15,6 +15,8 @@ type Config struct {
 	GinMode         string
 	CORSAllowOrigin string
 	JWTSecret       string
+	RunDBMigrations bool
+	DBSchemaPath    string
 	DBHost          string
 	DBPort          string
 	DBUser          string
@@ -34,6 +36,7 @@ func Load() (*Config, error) {
 		GinMode:         getEnv("GIN_MODE", "debug"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
 		JWTSecret:       getEnv("JWT_SECRET", "dev-jwt-secret-change-me"),
+		DBSchemaPath:    getEnv("DB_SCHEMA_PATH", "db/init.sql"),
 		DBHost:          getEnv("DB_HOST", getEnv("POSTGRES_HOST", "localhost")),
 		DBPort:          getEnv("DB_PORT", getEnv("POSTGRES_PORT", "5432")),
 		DBUser:          getEnv("DB_USER", getEnv("POSTGRES_USER", "")),
@@ -41,6 +44,12 @@ func Load() (*Config, error) {
 		DBName:          getEnv("DB_NAME", getEnv("POSTGRES_DB", "")),
 		DBSSLMode:       getEnv("DB_SSLMODE", "disable"),
 	}
+
+	runDBMigrations, err := parseBoolEnv("RUN_DB_MIGRATIONS", false)
+	if err != nil {
+		return nil, err
+	}
+	cfg.RunDBMigrations = runDBMigrations
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -110,6 +119,20 @@ func isValidPort(value string) bool {
 	}
 
 	return port >= 1 && port <= 65535
+}
+
+func parseBoolEnv(key string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean value", key)
+	}
+
+	return parsed, nil
 }
 
 func loadDotEnv(path string) error {

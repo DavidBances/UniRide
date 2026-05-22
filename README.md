@@ -304,6 +304,8 @@ Set these production variables in Render, without committing real secrets:
 - Backend: `JWT_SECRET`, `CORS_ALLOW_ORIGIN`, `GIN_MODE=release`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE=require`.
 - Frontend: `VITE_API_BASE_URL` with the public backend URL, for example `https://uniride-backend.onrender.com`.
 
+The Render blueprint enables `RUN_DB_MIGRATIONS=true` for the backend and applies `db/init.sql` on startup. The SQL file is idempotent, so a fresh Render PostgreSQL database receives the required tables and demo data automatically, and service restarts do not recreate existing rows.
+
 Expected public URLs when using the service names from `render.yaml`:
 
 - Frontend: `https://uniride-frontend.onrender.com`
@@ -314,7 +316,7 @@ Set the cross-service values after Render creates the services:
 - Frontend `VITE_API_BASE_URL=https://uniride-backend.onrender.com`
 - Backend `CORS_ALLOW_ORIGIN=https://uniride-frontend.onrender.com`
 
-After provisioning the database, apply the SQL schema from `db/init.sql` or the migration files in `db/migrations/` using the provider SQL console or `psql`. Then verify:
+After provisioning the services, verify:
 
 1. Backend `/health` responds publicly.
 2. Frontend opens publicly.
@@ -322,6 +324,12 @@ After provisioning the database, apply the SQL schema from `db/init.sql` or the 
 4. `CORS_ALLOW_ORIGIN` matches the public frontend URL.
 5. Direct refresh works for `/login`, `/rides` and `/profile`.
 6. Mobile and desktop layouts are readable in the public frontend URL.
+
+Current public deployment check on May 22, 2026:
+
+- Frontend URL responds: `https://uniride-frontend.onrender.com`
+- Backend URL expected by the frontend: `https://uniride-backend.onrender.com`
+- Backend `/health` must be redeployed from this repository version; the currently reachable service responds at `/` but does not expose the current `/health` route.
 
 ## Quick Verification Checklist
 

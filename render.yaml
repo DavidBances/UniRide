@@ -2,7 +2,7 @@ services:
   - type: web
     name: uniride-backend
     runtime: go
-    buildCommand: go build -o backend/bin/server ./backend/cmd/server
+    buildCommand: mkdir -p backend/bin && go build -o backend/bin/server ./backend/cmd/server
     startCommand: ./backend/bin/server
     healthCheckPath: /health
     envVars:
@@ -12,6 +12,10 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: RUN_DB_MIGRATIONS
+        value: "true"
+      - key: DB_SCHEMA_PATH
+        value: db/init.sql
       - key: DB_HOST
         fromDatabase:
           name: uniride-postgres

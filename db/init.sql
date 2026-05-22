@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
@@ -11,6 +11,8 @@ INSERT INTO users (id, username, email, password_hash, created_at) VALUES
     (2, 'marta', 'marta@uni.es', '$2a$10$w6D9tP7h7m8Q9J8z0QK8eOq2vW4QYlq6aYQk1q4QhM3oQ8xJtNQxkC', CURRENT_TIMESTAMP),
     (3, 'carlos', 'carlos@uni.es', '$2a$10$w6D9tP7h7m8Q9J8z0QK8eOq2vW4QYlq6aYQk1q4QhM3oQ8xJtNQxkC', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1), true);
 
 CREATE TABLE IF NOT EXISTS ride (
     id SERIAL PRIMARY KEY,
@@ -34,6 +36,8 @@ INSERT INTO ride (id, driver_id, origin, destination, departure_date, available_
     (3, 1, 'Madrid', 'Segovia', '2026-05-22 09:15:00', 4, 6.00, 'open', CURRENT_TIMESTAMP),
     (4, 2, 'Leon', 'Madrid', '2026-04-15 12:00:00', 1, 10.00, 'completed', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('ride', 'id'), COALESCE((SELECT MAX(id) FROM ride), 1), true);
 
 CREATE TABLE IF NOT EXISTS bookings (
     id SERIAL PRIMARY KEY,
@@ -67,6 +71,10 @@ INSERT INTO bookings (ride_id, user_id, seats_reserved, status) VALUES
     (4, 3, 1, 'confirmed')
 ON CONFLICT (ride_id, user_id) DO NOTHING;
 
+SELECT setval(pg_get_serial_sequence('bookings', 'id'), COALESCE((SELECT MAX(id) FROM bookings), 1), true);
+
 INSERT INTO reviews (ride_id, reviewer_id, reviewed_user_id, rating, comment) VALUES
     (4, 3, 2, 5, 'Great completed ride for the demo.')
 ON CONFLICT (ride_id, reviewer_id, reviewed_user_id) DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('reviews', 'id'), COALESCE((SELECT MAX(id) FROM reviews), 1), true);
