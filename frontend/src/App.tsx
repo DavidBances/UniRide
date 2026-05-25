@@ -6,6 +6,7 @@ import Login from "./Login";
 import ProfilePage from "./ProfilePage";
 import Register from "./Register";
 import RidesPage from "./RidesPage";
+import RideDetailsPage from "./RideDetailsPage";
 import CreateRide from "./CreateRide";
 
 const pageTitles: Record<string, string> = {
@@ -25,7 +26,11 @@ function App() {
   const hasToken = Boolean(getStoredToken());
 
   useEffect(() => {
-    document.title = pageTitles[currentPath] ?? "UniRide";
+    if (currentPath.startsWith("/rides/") && currentPath.length > 7) {
+      document.title = "UniRide | Ride Details";
+    } else {
+      document.title = pageTitles[currentPath] ?? "UniRide";
+    }
   }, [currentPath]);
 
   useEffect(() => {
@@ -40,6 +45,11 @@ function App() {
 function renderPage(path: string, hasToken: boolean) {
   if (isPrivateRoute(path) && !hasToken) {
     return <RedirectingPrivatePage />;
+  }
+
+  if (path.startsWith("/rides/") && path.length > 7) {
+    const rideId = path.split("/")[2];
+    if (rideId) return <RideDetailsPage rideId={rideId} />;
   }
 
   switch (path) {

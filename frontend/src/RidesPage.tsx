@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiUrl } from "./api";
 import { getStoredToken } from "./authToken";
 
@@ -280,14 +281,22 @@ export default function RidesPage() {
                   <dd className="font-bold">{formatRating(ride.averageRating, ride.reviewCount)}</dd>
                 </div>
               </dl>
-              <button
-                className="btn btn-primary w-full"
-                type="button"
-                onClick={() => handleReserveClick(ride)}
-                disabled={ride.status !== "open" || ride.availableSeats <= 0}
-              >
-                {ride.status !== "open" ? "Completed ride" : ride.availableSeats <= 0 ? "No seats left" : "Reservar"}
-              </button>
+              <div className="mt-4 flex gap-3">
+                <Link
+                  to={`/rides/${ride.id}`}
+                  className="btn border border-gray-200 bg-white text-gray-700 flex-1 text-center"
+                >
+                  Ver detalles
+                </Link>
+                <button
+                  className="btn btn-primary flex-1"
+                  type="button"
+                  onClick={() => handleReserveClick(ride)}
+                  disabled={ride.status !== "open" || ride.availableSeats <= 0}
+                >
+                  {ride.status !== "open" ? "Completed ride" : ride.availableSeats <= 0 ? "No seats left" : "Reservar"}
+                </button>
+              </div>
             </article>
           ))}
         </div>
