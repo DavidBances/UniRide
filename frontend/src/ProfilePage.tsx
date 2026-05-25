@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiUrl } from "./api";
-import { clearStoredToken, getStoredToken } from "./authToken";
+import { getStoredToken } from "./authToken";
 
-type User = {
+// Types
+type BookingRideSummary = {
   id: number;
-  username: string;
-  email: string;
-};
-
-type MeResponse = {
-  user?: User;
+  route: string;
+  origin: string;
+  destination: string;
+  date: string;
+  price: number;
+  status: string;
+  averageRating: number;
+  reviewCount: number;
 };
 
 type Booking = {
@@ -18,447 +21,231 @@ type Booking = {
   seatsReserved: number;
   status: string;
   createdAt: string;
-  ride: {
-    id: number;
-    route: string;
-    origin: string;
-    destination: string;
-    date: string;
-    price: number;
-    status: string;
-    averageRating: number;
-    reviewCount: number;
-  };
+  ride: BookingRideSummary;
 };
 
-type BookingsResponse = {
-  bookings?: Booking[];
-  error?: string;
+type UserRide = {
+  id: number;
+  origin: string;
+  destination: string;
+  departureDate: string;
+  availableSeats: number;
+  price: number;
+  status: string;
+  bookingsCount: number;
 };
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
-  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [reviewLoading, setReviewLoading] = useState(false);
-  const [reviewError, setReviewError] = useState("");
+  const [rides, setRides] = useState<UserRide[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [loadingRides, setLoadingRides] = useState(true);
+  const [errorBookings, setErrorBookings] = useState("");
+  const [errorRides, setErrorRides] = useState("");
+  
+  const token = getStoredToken();
 
   useEffect(() => {
-    const token = getStoredToken();
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
     const controller = new AbortController();
-
-    const loadDashboard = async () => {
-      setLoading(true);
-      setError("");
-
+    
+    const fetchBookings = async () => {
       try {
-        const headers = {
-          Authorization: `Bearer ${token}`,
-        };
-
-        const [meResponse, bookingsResponse] = await Promise.all([
-          fetch(apiUrl("/api/private/me"), { headers, signal: controller.signal }),
-          fetch(apiUrl("/api/me/bookings"), { headers, signal: controller.signal }),
-        ]);
-
-        if (!meResponse.ok) {
-          throw new Error("invalid session");
-        }
-
-        const meData = (await meResponse.json()) as MeResponse;
-        if (!meData.user) {
-          throw new Error("missing user");
-        }
-
-        setUser(meData.user);
-
-        if (bookingsResponse.ok) {
-          const bookingsData = (await bookingsResponse.json()) as BookingsResponse;
-          setBookings(bookingsData.bookings ?? []);
-        } else {
-          setBookings([]);
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-
-        clearStoredToken();
-        setError("No se pudo cargar tu perfil. Vuelve a iniciar sesion.");
+        const response = await fetch(apiUrl("/api/me/bookings"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Error al cargar reservas");
+        setBookings(data.bookings || []);
+      } catch (err: any) {
+        if (err.name !== "AbortError") setErrorBookings(err.message);
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        setLoadingBookings(false);
       }
     };
 
-    void loadDashboard();
+    const fetchRides = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/me/rides"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Error al cargar viajes");
+        setRides(data.rides || []);
+      } catch (err: any) {
+        if (err.name !== "AbortError") setErrorRides(err.message);
+      } finally {
+        setLoadingRides(false);
+      }
+    };
 
-    return () => controller.abort();
-  }, [navigate]);
-
-  const stats = useMemo(() => buildStats(bookings), [bookings]);
-
-  const handleLogout = () => {
-    clearStoredToken();
-    navigate("/login", { replace: true });
-  };
-
-  const handleDeleteBooking = async (bookingId: number) => {
-    const token = getStoredToken();
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
+    if (token) {
+      void fetchBookings();
+      void fetchRides();
     }
 
-    setDeletingBookingId(bookingId);
-    setError("");
+    return () => controller.abort();
+  }, [token]);
+
+  const handleCancelBooking = async (bookingId: number) => {
+    if (!window.confirm("¿Estás seguro de que quieres cancelar esta reserva?")) return;
 
     try {
       const response = await fetch(apiUrl(`/api/bookings/${bookingId}`), {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
+      const data = await response.json();
 
       if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        setError(data.error ?? "No se pudo cancelar la reserva.");
+        alert(data.error || "No se pudo cancelar la reserva.");
         return;
       }
 
-      setBookings((current) => current.filter((booking) => booking.id !== bookingId));
-    } catch {
-      setError("Error de conexion al intentar cancelar la reserva.");
-    } finally {
-      setDeletingBookingId(null);
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    } catch (error) {
+      alert("Error de conexión al servidor.");
     }
   };
 
-  const openReviewForm = (booking: Booking) => {
-    setReviewBooking(booking);
-    setReviewRating(5);
-    setReviewComment("");
-    setReviewError("");
+  const formatRideDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
   };
-
-  const handleSubmitReview = async () => {
-    const token = getStoredToken();
-    if (!reviewBooking || !token) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    setReviewLoading(true);
-    setReviewError("");
-
-    try {
-      const response = await fetch(apiUrl("/api/reviews"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          rideId: reviewBooking.ride.id,
-          rating: reviewRating,
-          comment: reviewComment,
-        }),
-      });
-
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setReviewError(data.error ?? "Could not submit review.");
-        return;
-      }
-
-      setReviewBooking(null);
-      setReviewComment("");
-    } catch {
-      setReviewError("Connection error while submitting the review.");
-    } finally {
-      setReviewLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <section className="w-full py-6" aria-busy="true">
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
-          <h1 className="mt-2 text-2xl font-bold text-gray-950">Loading your dashboard</h1>
-          <span className="loading-spinner mt-4" aria-hidden="true" />
-          <p className="mt-2 text-gray-600">Checking your session and latest bookings.</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (error || !user) {
-    return (
-      <section className="w-full py-6">
-        <div className="rounded-lg border border-red-100 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-950">Profile unavailable</h1>
-          <p className="mt-2 text-red-700">{error || "No se pudo cargar tu perfil."}</p>
-          <Link className="btn btn-primary mt-5 inline-flex" to="/login">
-            Login
-          </Link>
-        </div>
-      </section>
-    );
-  }
 
   return (
-    <section className="w-full py-6">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <section className="w-full max-w-6xl mx-auto py-6 px-4">
+      <h1 className="text-3xl font-bold text-gray-950 mb-8">Mi Perfil</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Sección de Reservas */}
         <div>
-          <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
-          <h1 className="mt-2 text-3xl font-bold text-gray-950">Welcome, {user.username}</h1>
-          <p className="mt-2 text-gray-600">Manage your rides, reservations and account access from one place.</p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <a className="btn border border-gray-200 bg-white text-gray-800" href="#my-bookings">
-            My bookings
-          </a>
-          <a className="btn border border-gray-200 bg-white text-gray-800" href="#my-rides">
-            My rides
-          </a>
-          <button className="btn btn-primary" type="button" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {error && <p className="message message-error mb-4">{error}</p>}
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-        <aside className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-950">Basic info</h2>
-          <dl className="mt-4 grid gap-4">
-            <ProfileField label="Username" value={user.username} />
-            <ProfileField label="Email" value={user.email} />
-            <ProfileField label="Account status" value="Authenticated" />
-          </dl>
-        </aside>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          {stats.map((stat) => (
-            <article className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm" key={stat.label}>
-              <p className="text-sm font-semibold text-gray-500">{stat.label}</p>
-              <p className="mt-3 text-3xl font-bold text-gray-950">{stat.value}</p>
-              <p className="mt-2 text-sm text-gray-600">{stat.caption}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <section id="my-bookings" className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-950">My bookings</h2>
-              <p className="text-sm text-gray-600">Your latest passenger reservations.</p>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Mis Reservas</h2>
+          
+          {loadingBookings ? (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" aria-busy="true">
+              <span className="loading-spinner" aria-hidden="true" />
+              <p className="mt-2 text-gray-600">Cargando reservas...</p>
             </div>
-            <Link className="text-sm font-bold text-teal-700 hover:underline" to="/rides">
-              Find rides
-            </Link>
-          </div>
-
-          {bookings.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-4">
-              <p className="font-bold text-gray-950">You do not have bookings yet.</p>
-              <p className="mt-1 text-sm text-gray-600">Find an open ride and reserve your first seat.</p>
-              <Link className="btn btn-primary mt-4" to="/rides">
-                Find rides
-              </Link>
+          ) : errorBookings ? (
+            <div className="rounded-lg border border-red-100 bg-red-50 p-4">
+              <p className="text-red-700">{errorBookings}</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="empty-state">
+              <h3 className="text-lg font-bold text-gray-950">Aún no tienes reservas</h3>
+              <p className="mt-2 text-gray-600 text-sm">Explora los viajes disponibles y reserva tu próximo trayecto.</p>
+              <Link className="btn btn-primary mt-4 text-sm" to="/rides">Buscar viajes</Link>
             </div>
           ) : (
-            <div className="grid gap-3">
-              {bookings.slice(0, 3).map((booking) => (
-                <article className="rounded-lg border border-gray-100 bg-gray-50 p-4" key={booking.id}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="font-bold text-gray-950">{booking.ride.route}</h3>
-                      <p className="mt-1 text-sm text-gray-600">{formatDate(booking.ride.date)}</p>
+            <div className="grid gap-4">
+              {bookings.map((booking) => (
+                <article key={booking.id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{booking.ride.route}</h3>
+                        <p className="text-sm text-gray-600">{formatRideDate(booking.ride.date)}</p>
+                      </div>
+                      <span className={`rounded-md px-2 py-1 text-xs font-bold ${
+                        booking.status === "confirmed" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-700"
+                      }`}>
+                        {booking.status.toUpperCase()}
+                      </span>
                     </div>
-                    <span className="w-fit rounded-md bg-teal-50 px-2 py-1 text-sm font-bold text-teal-700">
-                      {booking.status}
-                    </span>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-4 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
+                      <div>
+                        <p className="text-gray-500 font-medium">Asientos</p>
+                        <p className="font-bold text-gray-900">{booking.seatsReserved}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-medium">Precio total</p>
+                        <p className="font-bold text-gray-900">{(booking.ride.price * booking.seatsReserved).toFixed(2)} €</p>
+                      </div>
+                    </div>
                   </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <ProfileField label="Seats" value={String(booking.seatsReserved)} />
-                    <ProfileField label="Price" value={`${Number(booking.ride.price).toFixed(2)} EUR`} />
-                    <ProfileField label="Rating" value={formatRating(booking.ride.averageRating, booking.ride.reviewCount)} />
-                  </dl>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {booking.ride.status === "completed" && (
-                      <button
-                        className="btn border border-teal-200 bg-teal-50 text-sm text-teal-800"
-                        type="button"
-                        onClick={() => openReviewForm(booking)}
-                      >
-                        Rate ride
-                      </button>
-                    )}
-                    <button
-                      className="btn border border-red-200 bg-red-50 text-sm text-red-700"
-                      type="button"
-                      onClick={() => handleDeleteBooking(booking.id)}
-                      disabled={deletingBookingId === booking.id}
-                    >
-                      {deletingBookingId === booking.id && <span className="button-spinner border-red-200 border-t-red-700" aria-hidden="true" />}
-                      {deletingBookingId === booking.id ? "Cancelling..." : "Cancel booking"}
+
+                  <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
+                    <Link to={`/rides/${booking.ride.id}`} className="btn border border-gray-200 bg-white text-gray-700 flex-1 text-center text-sm py-2">
+                      Ver viaje
+                    </Link>
+                    <button onClick={() => handleCancelBooking(booking.id)} className="btn bg-red-50 text-red-600 hover:bg-red-100 flex-1 text-sm py-2">
+                      Cancelar
                     </button>
                   </div>
                 </article>
               ))}
             </div>
           )}
-        </section>
-
-        <section id="my-rides" className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-950">My rides</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Publish a ride or review the public rides list while personal ride management is completed.
-          </p>
-          <div className="mt-5 grid gap-3">
-            <Link className="btn btn-primary text-center" to="/create-ride">
-              Publish ride
-            </Link>
-            <Link className="btn border border-gray-200 bg-white text-center text-gray-800" to="/rides">
-              Browse rides
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      {reviewBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="review-title">
-          <div className="max-h-full w-full max-w-md overflow-auto rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-950" id="review-title">Rate ride</h2>
-            <p className="mt-2 text-sm text-gray-600">{reviewBooking.ride.route}</p>
-
-            {reviewError && <p className="message message-error mt-4">{reviewError}</p>}
-
-            <div className="mt-5 grid gap-4">
-              <div className="field">
-                <label className="text-label" htmlFor="review-rating">
-                  Rating
-                </label>
-                <select
-                  className="input"
-                  id="review-rating"
-                  value={reviewRating}
-                  onChange={(event) => setReviewRating(Number(event.target.value))}
-                >
-                  <option value={5}>5 - Excellent</option>
-                  <option value={4}>4 - Good</option>
-                  <option value={3}>3 - Okay</option>
-                  <option value={2}>2 - Poor</option>
-                  <option value={1}>1 - Bad</option>
-                </select>
-              </div>
-
-              <div className="field">
-                <label className="text-label" htmlFor="review-comment">
-                  Comment
-                </label>
-                <textarea
-                  className="input min-h-24"
-                  id="review-comment"
-                  value={reviewComment}
-                  onChange={(event) => setReviewComment(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <button
-                className="btn border border-gray-200 bg-white text-gray-800 sm:flex-1"
-                type="button"
-                onClick={() => setReviewBooking(null)}
-                disabled={reviewLoading}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary sm:flex-1"
-                type="button"
-                onClick={handleSubmitReview}
-                disabled={reviewLoading}
-              >
-                {reviewLoading && <span className="button-spinner" aria-hidden="true" />}
-                {reviewLoading ? "Submitting..." : "Submit review"}
-              </button>
-            </div>
-          </div>
         </div>
-      )}
+
+        {/* Sección de Viajes Publicados */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Mis Viajes Publicados</h2>
+            <Link to="/create-ride" className="btn btn-primary text-sm py-1.5 px-3">+ Nuevo</Link>
+          </div>
+          
+          {loadingRides ? (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" aria-busy="true">
+              <span className="loading-spinner" aria-hidden="true" />
+              <p className="mt-2 text-gray-600">Cargando viajes...</p>
+            </div>
+          ) : errorRides ? (
+            <div className="rounded-lg border border-red-100 bg-red-50 p-4">
+              <p className="text-red-700">{errorRides}</p>
+            </div>
+          ) : rides.length === 0 ? (
+            <div className="empty-state">
+              <h3 className="text-lg font-bold text-gray-950">No has publicado viajes</h3>
+              <p className="mt-2 text-gray-600 text-sm">Empieza a compartir coche y ahorra gastos.</p>
+              <Link className="btn btn-primary mt-4 text-sm" to="/create-ride">Publicar viaje</Link>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {rides.map((ride) => (
+                <article key={ride.id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{ride.origin} &rarr; {ride.destination}</h3>
+                      <p className="text-sm text-gray-600">{formatRideDate(ride.departureDate)}</p>
+                    </div>
+                    <span className={`rounded-md px-2 py-1 text-xs font-bold ${
+                      ride.status === "open" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {ride.status.toUpperCase()}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 text-sm mt-4 bg-gray-50 p-3 rounded border border-gray-100">
+                    <div>
+                      <p className="text-gray-500 font-medium text-xs">Libres</p>
+                      <p className="font-bold text-gray-900">{ride.availableSeats}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium text-xs">Reservas</p>
+                      <p className="font-bold text-gray-900">{ride.bookingsCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium text-xs">Precio</p>
+                      <p className="font-bold text-gray-900">{ride.price.toFixed(2)} €</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <Link to={`/rides/${ride.id}`} className="btn border border-gray-200 bg-white text-gray-700 w-full text-center text-sm py-2 block">
+                      Ver detalles
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
-}
-
-function ProfileField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-label">{label}</dt>
-      <dd className="mt-1 break-words font-bold text-gray-950">{value}</dd>
-    </div>
-  );
-}
-
-function buildStats(bookings: Booking[]) {
-  const activeBookings = bookings.filter((booking) => booking.status !== "cancelled").length;
-  const reservedSeats = bookings.reduce((total, booking) => total + booking.seatsReserved, 0);
-
-  return [
-    {
-      label: "Bookings",
-      value: String(bookings.length),
-      caption: "Total reservations",
-    },
-    {
-      label: "Active",
-      value: String(activeBookings),
-      caption: "Ready or pending",
-    },
-    {
-      label: "Seats",
-      value: String(reservedSeats),
-      caption: "Reserved seats",
-    },
-  ];
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleString("es-ES", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-function formatRating(averageRating: number, reviewCount: number) {
-  if (!reviewCount) {
-    return "No ratings yet";
-  }
-
-  return `${Number(averageRating).toFixed(1)}/5 (${reviewCount})`;
 }
