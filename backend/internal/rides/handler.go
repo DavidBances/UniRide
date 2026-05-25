@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,36 @@ type createRideRequest struct {
 	AvailableSeats int      `json:"availableSeats"`
 	Price          *float64 `json:"price"`
 	PricePerSeat   *float64 `json:"pricePerSeat"`
+}
+
+// validate checks if the ride request is valid and returns the parsed departure date.
+func (req *createRideRequest) validate() (time.Time, error) {
+	if strings.TrimSpace(req.Origin) == "" || strings.TrimSpace(req.Destination) == "" || strings.TrimSpace(req.DepartureDate) == "" {
+		return time.Time{}, errInvalidRideInput
+	}
+
+	if req.AvailableSeats <= 0 {
+		return time.Time{}, errInvalidSeats
+	}
+
+	price := req.Price
+	if price == nil {
+		price = req.PricePerSeat
+	}
+	if price != nil && *price < 0 {
+		return time.Time{}, errInvalidPrice
+	}
+
+	parsedDate, err := time.Parse(time.RFC3339, req.DepartureDate)
+	if err != nil {
+		return time.Time{}, errInvalidRideDate
+	}
+
+	if parsedDate.Before(time.Now()) {
+		return time.Time{}, errPastRideDate
+	}
+
+	return parsedDate, nil
 }
 
 // Handler exposes ride HTTP endpoints.
@@ -73,24 +104,15 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	if req.AvailableSeats <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidSeats.Error()})
+	parsedDate, err := req.validate()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	price := req.Price
 	if price == nil {
 		price = req.PricePerSeat
-	}
-	if price != nil && *price < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidPrice.Error()})
-		return
-	}
-
-	parsedDate, err := time.Parse(time.RFC3339, req.DepartureDate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidRideDate.Error()})
-		return
 	}
 
 	driverID := c.GetInt64("authUserID")

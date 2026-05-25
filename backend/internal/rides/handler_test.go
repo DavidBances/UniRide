@@ -85,6 +85,50 @@ func TestCreateRideRejectsInvalidSeats(t *testing.T) {
 	}
 }
 
+func TestCreateRideRejectsPastDate(t *testing.T) {
+	router, _ := setupRideRouter(t)
+	body := `{
+		"origin": "Madrid",
+		"destination": "Barcelona",
+		"departureDate": "2020-05-20T08:30:00Z",
+		"availableSeats": 3,
+		"price": 12.50
+	}`
+
+	request := httptest.NewRequest(http.MethodPost, "/rides", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
+	}
+}
+
+func TestCreateRideRejectsMissingOriginOrDestination(t *testing.T) {
+	router, _ := setupRideRouter(t)
+	body := `{
+		"origin": "",
+		"destination": "Barcelona",
+		"departureDate": "2099-05-20T08:30:00Z",
+		"availableSeats": 3,
+		"price": 12.50
+	}`
+
+	request := httptest.NewRequest(http.MethodPost, "/rides", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
+	}
+}
+
 func TestListRidesAppliesFilters(t *testing.T) {
 	router, repo := setupRideRouter(t)
 
