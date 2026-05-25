@@ -143,3 +143,7 @@ func (r *fakeReviewTripRepository) ListOpenTrips(_ context.Context, filters doma
 func (r *fakeReviewTripRepository) Update(_ context.Context, _ *domain.Trip) error {
 	return nil
 }
+
+func (r *fakeReviewTripRepository) ListByDriverID(_ context.Context, _ int64) ([]*domain.Trip, error) {
+	return nil, nil
+}

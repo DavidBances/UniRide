@@ -53,9 +53,11 @@ func New(dependencies Dependencies) *gin.Engine {
 
 	apiMeGroup := api.Group("/me", auth.Middleware(dependencies.JWTSecret))
 	apiMeGroup.GET("/bookings", dependencies.BookingHandler.ListCurrentUser)
+	apiMeGroup.GET("/rides", dependencies.RideHandler.ListCurrentUserRides)
 
 	meGroup := engine.Group("/me", auth.Middleware(dependencies.JWTSecret))
 	meGroup.GET("/bookings", dependencies.BookingHandler.ListCurrentUser)
+	meGroup.GET("/rides", dependencies.RideHandler.ListCurrentUserRides)
 
 	// Rutas públicas para listar los viajes (rides)
 	api.GET("/rides", dependencies.RideHandler.ListRides)

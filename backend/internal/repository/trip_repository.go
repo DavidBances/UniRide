@@ -139,9 +139,11 @@ func (r *tripRepository) ListOpenTrips(ctx context.Context, filters domain.TripF
 			rd.status,
 			rd.created_at,
 			COALESCE(ROUND(AVG(rv.rating)::numeric, 1), 0)::float8 AS average_rating,
-			COUNT(rv.id)::int AS review_count
+			COUNT(DISTINCT rv.id)::int AS review_count,
+			COUNT(DISTINCT b.id)::int AS bookings_count
 		FROM ride rd
 		LEFT JOIN reviews rv ON rv.ride_id = rd.id
+		LEFT JOIN bookings b ON b.ride_id = rd.id
 		WHERE rd.status IN ('open', 'completed')`
 	args := []any{}
 	conditions := []string{}
@@ -193,6 +195,7 @@ func (r *tripRepository) ListOpenTrips(ctx context.Context, filters domain.TripF
 			&trip.CreatedAt,
 			&trip.AverageRating,
 			&trip.ReviewCount,
+			&trip.BookingsCount,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan trip: %w", err)
 		}
@@ -234,4 +237,61 @@ func (r *tripRepository) Update(ctx context.Context, trip *domain.Trip) error {
 	}
 
 	return nil
+}
+
+func (r *tripRepository) ListByDriverID(ctx context.Context, driverID int64) ([]*domain.Trip, error) {
+	query := `SELECT
+			rd.id,
+			rd.driver_id,
+			rd.origin,
+			rd.destination,
+			rd.departure_date,
+			rd.available_seats,
+			rd.price_per_seat,
+			rd.status,
+			rd.created_at,
+			COALESCE(ROUND(AVG(rv.rating)::numeric, 1), 0)::float8 AS average_rating,
+			COUNT(DISTINCT rv.id)::int AS review_count,
+			COUNT(DISTINCT b.id)::int AS bookings_count
+		FROM ride rd
+		LEFT JOIN reviews rv ON rv.ride_id = rd.id
+		LEFT JOIN bookings b ON b.ride_id = rd.id
+		WHERE rd.driver_id = $1
+		GROUP BY rd.id
+		ORDER BY rd.departure_date DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, driverID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list driver trips: %w", err)
+	}
+	defer rows.Close()
+
+	trips := []*domain.Trip{}
+	for rows.Next() {
+		var trip domain.Trip
+		if err := rows.Scan(
+			&trip.ID,
+			&trip.DriverID,
+			&trip.Origin,
+			&trip.Destination,
+			&trip.DepartureDate,
+			&trip.AvailableSeats,
+			&trip.PricePerSeat,
+			&trip.Status,
+			&trip.CreatedAt,
+			&trip.AverageRating,
+			&trip.ReviewCount,
+			&trip.BookingsCount,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan driver trip: %w", err)
+		}
+
+		trips = append(trips, &trip)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read driver trips: %w", err)
+	}
+
+	return trips, nil
 }
