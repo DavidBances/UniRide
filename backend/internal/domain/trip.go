@@ -22,6 +22,7 @@ type Trip struct {
 	CreatedAt      time.Time
 	AverageRating  float64
 	ReviewCount    int
+	BookingsCount  int
 }
 
 // RideDriver contains the public driver information returned in ride detail responses.
@@ -65,4 +66,5 @@ type TripRepository interface {
 	GetRideDetailsByID(ctx context.Context, id int64) (*RideDetails, error)
 	ListOpenTrips(ctx context.Context, filters TripFilters) ([]*Trip, error)
 	Update(ctx context.Context, trip *Trip) error
+	ListByDriverID(ctx context.Context, driverID int64) ([]*Trip, error)
 }

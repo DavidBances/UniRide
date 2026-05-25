@@ -230,3 +230,36 @@ func (h *Handler) ListRides(c *gin.Context) {
 		"rides": responses,
 	})
 }
+
+// ListCurrentUserRides handles the GET /me/rides endpoint to return rides published by the user.
+func (h *Handler) ListCurrentUserRides(c *gin.Context) {
+	userID := c.GetInt64("authUserID")
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	trips, err := h.repo.ListByDriverID(ctx, userID)
+	if err != nil {
+		h.logger.Error("failed to find user trips", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user rides"})
+		return
+	}
+
+	responses := make([]gin.H, 0, len(trips))
+	for _, t := range trips {
+		responses = append(responses, gin.H{
+			"id":             t.ID,
+			"origin":         t.Origin,
+			"destination":    t.Destination,
+			"departureDate":  t.DepartureDate.Format(time.RFC3339),
+			"availableSeats": t.AvailableSeats,
+			"price":          t.PricePerSeat,
+			"status":         t.Status,
+			"bookingsCount":  t.BookingsCount,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"rides": responses,
+	})
+}
