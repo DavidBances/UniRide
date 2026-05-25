@@ -297,3 +297,7 @@ func (r *fakeTripRepository) ListOpenTrips(_ context.Context, filters domain.Tri
 		},
 	}, nil
 }
+
+func (r *fakeTripRepository) Update(_ context.Context, _ *domain.Trip) error {
+	return nil
+}

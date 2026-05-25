@@ -64,4 +64,5 @@ type TripRepository interface {
 	GetByID(ctx context.Context, id int64) (*Trip, error)
 	GetRideDetailsByID(ctx context.Context, id int64) (*RideDetails, error)
 	ListOpenTrips(ctx context.Context, filters TripFilters) ([]*Trip, error)
+	Update(ctx context.Context, trip *Trip) error
 }
