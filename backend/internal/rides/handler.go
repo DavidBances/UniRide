@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -33,110 +32,85 @@ type createRideRequest struct {
 	PricePerSeat   *float64 `json:"pricePerSeat"`
 }
 
-// Handler exposes ride HTTP handlers.
+// Handler exposes ride HTTP endpoints.
 type Handler struct {
-	repository domain.TripRepository
-	logger     *slog.Logger
+	repo   domain.TripRepository
+	logger *slog.Logger
 }
 
-// NewHandler creates a ride handler.
-func NewHandler(repository domain.TripRepository, logger *slog.Logger) *Handler {
-	if logger == nil {
-		logger = slog.Default()
-	}
-
+// NewHandler creates a new ride handler.
+func NewHandler(repo domain.TripRepository, logger *slog.Logger) *Handler {
 	return &Handler{
-		repository: repository,
-		logger:     logger,
+		repo:   repo,
+		logger: logger,
 	}
+}
+
+// RideResponse maps the domain Trip to the API response format.
+type RideResponse struct {
+	ID             int64   `json:"id"`
+	DriverID       int64   `json:"driverId"`
+	Origin         string  `json:"origin"`
+	Destination    string  `json:"destination"`
+	DepartureDate  string  `json:"departureDate"`
+	AvailableSeats int     `json:"availableSeats"`
+	Price          float64 `json:"price"`
+	Status         string  `json:"status"`
 }
 
 // RegisterRoutes registers ride routes.
 func (h *Handler) RegisterRoutes(routeGroup *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
-	routeGroup.GET("", h.List)
-	routeGroup.GET("/:id", h.GetByID)
 	routeGroup.POST("", authMiddleware, h.Create)
+	routeGroup.GET("/:id", h.GetByID)
+	routeGroup.GET("", h.ListRides)
 }
 
-// GetByID returns the ride details for a single ride.
-func (h *Handler) GetByID(c *gin.Context) {
-	rideID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || rideID <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ride id"})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
-	defer cancel()
-
-	ride, err := h.repository.GetRideDetailsByID(ctx, rideID)
-	if err != nil {
-		if errors.Is(err, domain.ErrRideNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
-			return
-		}
-
-		h.logger.Error("failed to get ride details", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get ride details"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"ride": mapRideDetailsResponse(ride)})
-}
-
-// List returns the list of available rides.
-func (h *Handler) List(c *gin.Context) {
-	filters, err := parseRideFilters(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
-	defer cancel()
-
-	trips, err := h.repository.ListOpenTrips(ctx, filters)
-	if err != nil {
-		h.logger.Error("failed to list rides", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list rides"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"rides": mapTripsResponse(trips),
-	})
-}
-
-// Create handles ride creation requests.
+// Create handles the POST /rides endpoint to create a new ride.
 func (h *Handler) Create(c *gin.Context) {
 	var req createRideRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidRideInput.Error()})
 		return
 	}
 
-	departureDate, price, err := validateCreateRideRequest(req)
+	if req.AvailableSeats <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidSeats.Error()})
+		return
+	}
+
+	price := req.Price
+	if price == nil {
+		price = req.PricePerSeat
+	}
+	if price != nil && *price < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidPrice.Error()})
+		return
+	}
+
+	parsedDate, err := time.Parse(time.RFC3339, req.DepartureDate)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidRideDate.Error()})
 		return
 	}
 
-	userID := c.GetInt64("authUserID")
+	driverID := c.GetInt64("authUserID")
+
 	trip := &domain.Trip{
-		DriverID:       userID,
-		Origin:         strings.TrimSpace(req.Origin),
-		Destination:    strings.TrimSpace(req.Destination),
-		DepartureDate:  departureDate,
+		DriverID:       driverID,
+		Origin:         req.Origin,
+		Destination:    req.Destination,
+		DepartureDate:  parsedDate,
 		AvailableSeats: req.AvailableSeats,
-		PricePerSeat:   price,
 		Status:         "open",
+	}
+	if price != nil {
+		trip.PricePerSeat = *price
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
 	defer cancel()
 
-	if err := h.repository.Create(ctx, trip); err != nil {
+	if err := h.repo.Create(ctx, trip); err != nil {
 		h.logger.Error("failed to create ride", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create ride"})
 		return
@@ -144,129 +118,93 @@ func (h *Handler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "ride created successfully",
-		"ride":    mapTripResponse(trip),
+		"ride":    trip,
 	})
 }
 
-func validateCreateRideRequest(req createRideRequest) (time.Time, float64, error) {
-	if strings.TrimSpace(req.Origin) == "" ||
-		strings.TrimSpace(req.Destination) == "" ||
-		strings.TrimSpace(req.DepartureDate) == "" ||
-		req.AvailableSeats == 0 ||
-		(req.Price == nil && req.PricePerSeat == nil) {
-		return time.Time{}, 0, errInvalidRideInput
-	}
-
-	departureDate, err := parseDepartureDate(req.DepartureDate)
+// GetByID handles the GET /rides/:id endpoint.
+func (h *Handler) GetByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return time.Time{}, 0, errInvalidRideDate
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ride id"})
+		return
 	}
 
-	if !departureDate.After(time.Now()) {
-		return time.Time{}, 0, errPastRideDate
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
+	ride, err := h.repo.GetRideDetailsByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrRideNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
+			return
+		}
+		h.logger.Error("failed to get ride details", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch ride"})
+		return
 	}
 
-	if req.AvailableSeats <= 0 {
-		return time.Time{}, 0, errInvalidSeats
-	}
-
-	price := 0.0
-	if req.Price != nil {
-		price = *req.Price
-	} else if req.PricePerSeat != nil {
-		price = *req.PricePerSeat
-	}
-
-	if price < 0 {
-		return time.Time{}, 0, errInvalidPrice
-	}
-
-	return departureDate, price, nil
+	c.JSON(http.StatusOK, gin.H{
+		"ride": gin.H{
+			"id":             ride.ID,
+			"driverId":       ride.DriverID,
+			"origin":         ride.Origin,
+			"destination":    ride.Destination,
+			"departureDate":  ride.DepartureDate.Format(time.RFC3339),
+			"availableSeats": ride.AvailableSeats,
+			"price":          ride.PricePerSeat,
+			"status":         ride.Status,
+			"driver":         ride.Driver,
+		},
+	})
 }
 
-func parseRideFilters(c *gin.Context) (domain.TripFilters, error) {
+// ListRides handles the GET /rides endpoint to return all active rides.
+func (h *Handler) ListRides(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), requestTimeout)
+	defer cancel()
+
 	filters := domain.TripFilters{
 		Origin:      c.Query("origin"),
 		Destination: c.Query("destination"),
 	}
 
-	if rawDate := strings.TrimSpace(c.Query("departureDate")); rawDate != "" {
-		departureDate, err := time.Parse("2006-01-02", rawDate)
-		if err != nil {
-			return domain.TripFilters{}, errors.New("departureDate must use YYYY-MM-DD format")
+	if dateStr := c.Query("departureDate"); dateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", dateStr); err == nil {
+			filters.DepartureDate = &parsed
 		}
-
-		filters.DepartureDate = &departureDate
 	}
 
-	if rawSeats := strings.TrimSpace(c.Query("availableSeats")); rawSeats != "" {
-		seats, err := strconv.Atoi(rawSeats)
-		if err != nil || seats <= 0 {
-			return domain.TripFilters{}, errInvalidSeats
+	if seatsStr := c.Query("availableSeats"); seatsStr != "" {
+		if seats, err := strconv.Atoi(seatsStr); err == nil {
+			filters.AvailableSeats = &seats
 		}
-
-		filters.AvailableSeats = &seats
 	}
 
-	return filters, nil
-}
-
-func parseDepartureDate(value string) (time.Time, error) {
-	if parsed, err := time.Parse(time.RFC3339, value); err == nil {
-		return parsed, nil
-	}
-
-	parsedDate, err := time.Parse("2006-01-02", value)
+	trips, err := h.repo.ListOpenTrips(ctx, filters)
 	if err != nil {
-		return time.Time{}, err
+		h.logger.Error("failed to find active trips", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch rides"})
+		return
 	}
 
-	return parsedDate, nil
-}
-
-func mapTripsResponse(trips []*domain.Trip) []gin.H {
-	response := make([]gin.H, 0, len(trips))
-	for _, trip := range trips {
-		response = append(response, mapTripResponse(trip))
+	// Inicializamos con 0 para que devuelva un slice [] en JSON y no 'null' (Support empty state response)
+	responses := make([]RideResponse, 0, len(trips))
+	for _, t := range trips {
+		responses = append(responses, RideResponse{
+			ID:             t.ID,
+			DriverID:       t.DriverID, // Include driver basic info
+			Origin:         t.Origin,
+			Destination:    t.Destination,
+			DepartureDate:  t.DepartureDate.Format(time.RFC3339), // ISO 8601 formating
+			AvailableSeats: t.AvailableSeats,
+			Price:          t.PricePerSeat,
+			Status:         t.Status,
+		})
 	}
 
-	return response
-}
-
-func mapTripResponse(trip *domain.Trip) gin.H {
-	return gin.H{
-		"id":             trip.ID,
-		"driverId":       trip.DriverID,
-		"origin":         trip.Origin,
-		"destination":    trip.Destination,
-		"departureDate":  trip.DepartureDate,
-		"availableSeats": trip.AvailableSeats,
-		"price":          trip.PricePerSeat,
-		"status":         trip.Status,
-		"createdAt":      trip.CreatedAt,
-		"averageRating":  trip.AverageRating,
-		"reviewCount":    trip.ReviewCount,
-	}
-}
-
-func mapRideDetailsResponse(ride *domain.RideDetails) gin.H {
-	return gin.H{
-		"id":             ride.ID,
-		"driverId":       ride.DriverID,
-		"origin":         ride.Origin,
-		"destination":    ride.Destination,
-		"departureDate":  ride.DepartureDate,
-		"availableSeats": ride.AvailableSeats,
-		"pricePerSeat":   ride.PricePerSeat,
-		"status":         ride.Status,
-		"createdAt":      ride.CreatedAt,
-		"averageRating":  ride.AverageRating,
-		"reviewCount":    ride.ReviewCount,
-		"driver": gin.H{
-			"id":        ride.Driver.ID,
-			"username":  ride.Driver.Username,
-			"email":     ride.Driver.Email,
-			"createdAt": ride.Driver.CreatedAt,
-		},
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"rides": responses,
+	})
 }
