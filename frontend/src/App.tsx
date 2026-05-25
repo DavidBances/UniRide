@@ -6,6 +6,7 @@ import Login from "./Login";
 import ProfilePage from "./ProfilePage";
 import Register from "./Register";
 import RidesPage from "./RidesPage";
+import CreateRide from "./CreateRide";
 
 const pageTitles: Record<string, string> = {
   "/": "UniRide",
@@ -51,12 +52,7 @@ function renderPage(path: string, hasToken: boolean) {
     case "/rides":
       return <RidesPage />;
     case "/create-ride":
-      return (
-        <PlaceholderPage
-          title="Create ride"
-          description="Ride creation page ready for future implementation."
-        />
-      );
+      return <CreateRide />;
     case "/profile":
       return <ProfilePage />;
     case "/placeholder":
