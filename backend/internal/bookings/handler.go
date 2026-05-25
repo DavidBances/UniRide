@@ -176,6 +176,18 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Restore available seats to the ride
+	ride, err := h.tripRepository.GetByID(ctx, booking.RideID)
+	if err == nil {
+		ride.AvailableSeats += booking.SeatsReserved
+		if ride.Status == "full" {
+			ride.Status = "open"
+		}
+		if err := h.tripRepository.Update(ctx, ride); err != nil {
+			h.logger.Error("failed to restore ride seats", "error", err)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "booking deleted successfully",
 	})
