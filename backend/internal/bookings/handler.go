@@ -102,6 +102,18 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// Reducimos los asientos disponibles en el viaje
+	ride.AvailableSeats -= req.SeatsReserved
+	if ride.AvailableSeats == 0 {
+		ride.Status = "full" // Si no quedan plazas, marcamos el viaje como lleno
+	}
+
+	if err := h.tripRepository.Update(ctx, ride); err != nil {
+		h.logger.Error("failed to update ride seats", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update ride"})
+		return
+	}
+
 	booking := &domain.Booking{
 		RideID:        req.RideID,
 		UserID:        userID,

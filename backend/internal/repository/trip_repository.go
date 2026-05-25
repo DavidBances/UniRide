@@ -206,3 +206,32 @@ func (r *tripRepository) ListOpenTrips(ctx context.Context, filters domain.TripF
 
 	return trips, nil
 }
+
+func (r *tripRepository) Update(ctx context.Context, trip *domain.Trip) error {
+	res, err := r.db.ExecContext(
+		ctx,
+		`UPDATE ride
+		 SET origin = $1, destination = $2, departure_date = $3, available_seats = $4, price_per_seat = $5, status = $6, updated_at = CURRENT_TIMESTAMP
+		 WHERE id = $7`,
+		trip.Origin,
+		trip.Destination,
+		trip.DepartureDate,
+		trip.AvailableSeats,
+		trip.PricePerSeat,
+		trip.Status,
+		trip.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update trip: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check updated rows: %w", err)
+	}
+	if rows == 0 {
+		return domain.ErrRideNotFound
+	}
+
+	return nil
+}
