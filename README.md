@@ -68,6 +68,16 @@ This project expects a root `.env` file for PostgreSQL. If you dont have the fil
 
 Backend defaults are defined in `backend/internal/config/config.go`, so the API can also read equivalent DB values from `DB_*` variables if needed.
 
+### Email Notifications
+
+To enable booking confirmation and cancellation emails, configure an SMTP provider (e.g., Mailtrap, SendGrid, Gmail) by adding the following to your `.env`:
+- `SMTP_HOST` (e.g., `smtp.mailtrap.io`)
+- `SMTP_PORT` (e.g., `587`)
+- `SMTP_USER`
+- `SMTP_PASS`
+
+If these are not set, the system will log the intended notification and safely skip sending without blocking the booking flow.
+
 ## Run Locally
 
 Open separate terminals from the repository root.

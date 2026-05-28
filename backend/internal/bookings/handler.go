@@ -3,13 +3,17 @@ package bookings
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/smtp"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/domain"
 )
 
@@ -127,6 +131,26 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// Extraer email del JWT y enviar notificación de forma asíncrona
+	authHeader := c.GetHeader("Authorization")
+	go func(header, origin, dest string, seats int, price float64) {
+		tokenString := strings.TrimPrefix(header, "Bearer ")
+		var userEmail string
+		if token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{}); err == nil {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if email, ok := claims["email"].(string); ok {
+					userEmail = email
+				}
+			}
+		}
+
+		if userEmail != "" {
+			subject := "Reserva confirmada - UniRide"
+			body := fmt.Sprintf("Hola,\n\nTu reserva para el viaje de %s a %s ha sido confirmada.\nAsientos reservados: %d\nPrecio total: %.2f EUR\n\n¡Buen viaje!", origin, dest, seats, price*float64(seats))
+			sendEmailSafe(userEmail, subject, body, h.logger)
+		}
+	}(authHeader, ride.Origin, ride.Destination, req.SeatsReserved, ride.PricePerSeat)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "booking created successfully",
 		"booking": gin.H{
@@ -186,6 +210,26 @@ func (h *Handler) Delete(c *gin.Context) {
 		if err := h.tripRepository.Update(ctx, ride); err != nil {
 			h.logger.Error("failed to restore ride seats", "error", err)
 		}
+
+		// Extraer email del JWT y enviar notificación asíncrona de cancelación
+		authHeader := c.GetHeader("Authorization")
+		go func(header, origin, dest string, seats int) {
+			tokenString := strings.TrimPrefix(header, "Bearer ")
+			var userEmail string
+			if token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{}); err == nil {
+				if claims, ok := token.Claims.(jwt.MapClaims); ok {
+					if email, ok := claims["email"].(string); ok {
+						userEmail = email
+					}
+				}
+			}
+
+			if userEmail != "" {
+				subject := "Reserva cancelada - UniRide"
+				body := fmt.Sprintf("Hola,\n\nTu reserva para el viaje de %s a %s ha sido cancelada correctamente.\nSe han liberado %d asientos.\n\nEsperamos verte pronto en otro viaje.", origin, dest, seats)
+				sendEmailSafe(userEmail, subject, body, h.logger)
+			}
+		}(authHeader, ride.Origin, ride.Destination, booking.SeatsReserved)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -216,4 +260,37 @@ func mapBookingsResponse(bookings []*domain.Booking) []gin.H {
 	}
 
 	return response
+}
+
+// sendEmailSafe sends an email safely without panicking, using environment SMTP configuration.
+func sendEmailSafe(to, subject, body string, logger *slog.Logger) {
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+	user := os.Getenv("SMTP_USER")
+	pass := os.Getenv("SMTP_PASS")
+
+	if host == "" || port == "" {
+		logger.Info("SMTP configuration not found, skipping email notification", "to", to, "subject", subject)
+		return
+	}
+
+	addr := host + ":" + port
+	auth := smtp.PlainAuth("", user, pass, host)
+
+	msg := []byte("To: " + to + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"Content-Type: text/plain; charset=UTF-8\r\n\r\n" +
+		body + "\r\n")
+
+	from := user
+	if from == "" {
+		from = "noreply@uniride.com"
+	}
+
+	err := smtp.SendMail(addr, auth, from, []string{to}, msg)
+	if err != nil {
+		logger.Error("failed to send email notification", "error", err, "to", to)
+	} else {
+		logger.Info("email notification sent successfully", "to", to, "subject", subject)
+	}
 }
