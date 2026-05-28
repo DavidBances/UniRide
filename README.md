@@ -210,6 +210,8 @@ Reviews are linked to the completed ride, the authenticated reviewer and the rev
 
 ### Backend + Frontend unit/integration tests
 
+Integration tests covering major business flows (rides and bookings) are automated and run on CI via the standard `go test` command.
+
 With Make (macOS/Linux):
 
 ```bash
@@ -340,4 +342,3 @@ Use this checklist to confirm local setup is complete:
 3. `npm run dev` in `frontend/` serves the app at port 5173.
 4. `go test -v -race ./...` and `npm run test` pass.
 5. `npx playwright test` runs when backend and frontend are up.
-
