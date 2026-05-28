@@ -27,11 +27,18 @@ func New(dependencies Dependencies) *gin.Engine {
 	engine.Use(gin.Logger(), gin.Recovery())
 	engine.Use(corsMiddleware(dependencies.CORSAllowOrigin))
 
+	// Global rate limiting: 10 requests per second, burst of 20
+	globalLimiter := RateLimitMiddleware(10, 20)
+	engine.Use(globalLimiter)
+
+	// Strict rate limiting for Auth routes: 1 req/sec, burst of 5
+	authLimiter := RateLimitMiddleware(1, 5)
+
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	authGroup := engine.Group("/auth")
+	authGroup := engine.Group("/auth", authLimiter)
 	authGroup.POST("/register", dependencies.AuthHandler.Register)
 	authGroup.POST("/login", dependencies.AuthHandler.Login)
 
@@ -42,11 +49,11 @@ func New(dependencies Dependencies) *gin.Engine {
 
 	// Temporary backward-compatible route for existing frontend calls.
 	// New clients should use POST /auth/login.
-	api.POST("/login", dependencies.AuthHandler.Login)
+	api.POST("/login", authLimiter, dependencies.AuthHandler.Login)
 
 	// Temporary backward-compatible route for existing frontend calls.
 	// New clients should use POST /auth/register.
-	api.POST("/register", dependencies.AuthHandler.Register)
+	api.POST("/register", authLimiter, dependencies.AuthHandler.Register)
 
 	privateAPI := api.Group("/private", auth.Middleware(dependencies.JWTSecret))
 	privateAPI.GET("/me", dependencies.AuthHandler.Me)
