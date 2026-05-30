@@ -195,12 +195,44 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <section className="w-full py-6" aria-busy="true">
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-sm font-bold uppercase text-teal-700">Profile</p>
-          <h1 className="mt-2 text-2xl font-bold text-gray-950">Loading your dashboard</h1>
-          <span className="loading-spinner mt-4" aria-hidden="true" />
-          <p className="mt-2 text-gray-600">Checking your session and latest bookings.</p>
+      <section className="w-full py-6" aria-busy="true" aria-label="Loading dashboard">
+        <div className="mb-6">
+          <div className="skeleton h-4 w-14 mb-3" />
+          <div className="skeleton h-9 w-64 mb-3" />
+          <div className="skeleton h-4 w-80 max-w-full" />
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="skeleton h-5 w-20 mb-4" />
+            <div className="grid gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i}>
+                  <div className="skeleton h-3 w-16 mb-1" />
+                  <div className="skeleton h-5 w-32" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="skeleton h-4 w-16 mb-3" />
+                <div className="skeleton h-10 w-12 mb-2" />
+                <div className="skeleton h-3 w-24" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="skeleton h-6 w-28 mb-1" />
+          <div className="skeleton h-4 w-48 mb-4" />
+          <div className="grid gap-3">
+            <BookingCardSkeleton />
+            <BookingCardSkeleton />
+          </div>
         </div>
       </section>
     );
@@ -278,11 +310,13 @@ export default function ProfilePage() {
           </div>
 
           {bookings.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-300 p-4">
-              <p className="font-bold text-gray-950">You do not have bookings yet.</p>
-              <p className="mt-1 text-sm text-gray-600">Find an open ride and reserve your first seat.</p>
-              <Link className="btn btn-primary mt-4" to="/rides">
-                Find rides
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6 text-center">
+              <p className="font-bold text-gray-950">No bookings yet</p>
+              <p className="mt-2 text-sm text-gray-600">
+                Find an open ride and reserve your first seat to see it here.
+              </p>
+              <Link className="btn btn-primary mt-4 inline-flex" to="/rides">
+                Browse rides
               </Link>
             </div>
           ) : (
@@ -408,6 +442,35 @@ export default function ProfilePage() {
         </div>
       )}
     </section>
+  );
+}
+
+function BookingCardSkeleton() {
+  return (
+    <article className="rounded-lg border border-gray-100 bg-gray-50 p-4" aria-hidden="true">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <div className="skeleton h-5 w-40" />
+          <div className="skeleton mt-2 h-4 w-28" />
+        </div>
+        <div className="skeleton h-6 w-20 rounded-md" />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div>
+          <div className="skeleton h-3 w-10" />
+          <div className="skeleton mt-1 h-5 w-14" />
+        </div>
+        <div>
+          <div className="skeleton h-3 w-10" />
+          <div className="skeleton mt-1 h-5 w-20" />
+        </div>
+        <div>
+          <div className="skeleton h-3 w-12" />
+          <div className="skeleton mt-1 h-5 w-24" />
+        </div>
+      </div>
+      <div className="mt-4 skeleton h-9 w-full" />
+    </article>
   );
 }
 
