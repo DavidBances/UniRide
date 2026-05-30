@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 INSERT INTO users (id, username, email, password_hash, created_at) VALUES
-    (1, 'admin', 'admin@uni.es', '$2a$10$w6D9tP7h7m8Q9J8z0QK8eOq2vW4QYlq6aYQk1q4QhM3oQ8xJtNQxkC', CURRENT_TIMESTAMP),
-    (2, 'marta', 'marta@uni.es', '$2a$10$w6D9tP7h7m8Q9J8z0QK8eOq2vW4QYlq6aYQk1q4QhM3oQ8xJtNQxkC', CURRENT_TIMESTAMP),
-    (3, 'carlos', 'carlos@uni.es', '$2a$10$w6D9tP7h7m8Q9J8z0QK8eOq2vW4QYlq6aYQk1q4QhM3oQ8xJtNQxkC', CURRENT_TIMESTAMP)
+    (1, 'admin',  'admin@uni.es',  '$2a$10$imEMlzhTqILoWhbWPJVos.iaN5OZOwLxlcThfmWyHeBVgDPcPN0qO', CURRENT_TIMESTAMP),
+    (2, 'marta',  'marta@uni.es',  '$2a$10$imEMlzhTqILoWhbWPJVos.iaN5OZOwLxlcThfmWyHeBVgDPcPN0qO', CURRENT_TIMESTAMP),
+    (3, 'carlos', 'carlos@uni.es', '$2a$10$imEMlzhTqILoWhbWPJVos.iaN5OZOwLxlcThfmWyHeBVgDPcPN0qO', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1), true);
@@ -31,10 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_ride_origin_lower ON ride(LOWER(origin));
 CREATE INDEX IF NOT EXISTS idx_ride_destination_lower ON ride(LOWER(destination));
 
 INSERT INTO ride (id, driver_id, origin, destination, departure_date, available_seats, price_per_seat, status, created_at) VALUES
-    (1, 2, 'Madrid', 'Barcelona', '2026-05-20 08:30:00', 3, 12.50, 'open', CURRENT_TIMESTAMP),
-    (2, 3, 'Leon', 'Oviedo', '2026-05-21 16:00:00', 2, 8.00, 'open', CURRENT_TIMESTAMP),
-    (3, 1, 'Madrid', 'Segovia', '2026-05-22 09:15:00', 4, 6.00, 'open', CURRENT_TIMESTAMP),
-    (4, 2, 'Leon', 'Madrid', '2026-04-15 12:00:00', 1, 10.00, 'completed', CURRENT_TIMESTAMP)
+    (1, 2, 'Madrid', 'Barcelona', CURRENT_TIMESTAMP + INTERVAL  '7 days', 3, 12.50, 'open',      CURRENT_TIMESTAMP),
+    (2, 3, 'León',   'Oviedo',    CURRENT_TIMESTAMP + INTERVAL '10 days', 2,  8.00, 'open',      CURRENT_TIMESTAMP),
+    (3, 1, 'Madrid', 'Segovia',   CURRENT_TIMESTAMP + INTERVAL '14 days', 4,  6.00, 'open',      CURRENT_TIMESTAMP),
+    (4, 2, 'León',   'Madrid',    CURRENT_TIMESTAMP - INTERVAL '45 days', 1, 10.00, 'completed', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('ride', 'id'), COALESCE((SELECT MAX(id) FROM ride), 1), true);
