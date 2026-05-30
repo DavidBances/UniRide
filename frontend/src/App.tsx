@@ -66,7 +66,12 @@ function renderPage(path: string, hasToken: boolean) {
     case "/profile":
       return <ProfilePage />;
     case "/placeholder":
-      return <ProfilePage />;
+      return (
+        <PlaceholderPage
+          title="Placeholder"
+          description="This page is reserved for future features."
+        />
+      );
     default:
       return <NotFoundPage />;
   }

@@ -73,8 +73,12 @@ export default function ProfilePage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Error al cargar reservas");
         setBookings(data.bookings || []);
-      } catch (err: any) {
-        if (err.name !== "AbortError") setErrorBookings(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name !== "AbortError") setErrorBookings(err.message);
+        } else {
+          setErrorBookings("Ocurrió un error inesperado");
+        }
       } finally {
         setLoadingBookings(false);
       }
@@ -89,8 +93,12 @@ export default function ProfilePage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Error al cargar viajes");
         setRides(data.rides || []);
-      } catch (err: any) {
-        if (err.name !== "AbortError") setErrorRides(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name !== "AbortError") setErrorRides(err.message);
+        } else {
+          setErrorRides("Ocurrió un error inesperado");
+        }
       } finally {
         setLoadingRides(false);
       }
@@ -145,8 +153,12 @@ export default function ProfilePage() {
       }
 
       setRideReservations(data.bookings || []);
-    } catch (err: any) {
-      setRideModalError(err.message || "Error al cargar las reservas del viaje");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setRideModalError(err.message || "Error al cargar las reservas del viaje");
+      } else {
+        setRideModalError("Error al cargar las reservas del viaje");
+      }
     } finally {
       setLoadingRideReservations(false);
     }
@@ -371,4 +383,3 @@ export default function ProfilePage() {
     </section>
   );
 }
-

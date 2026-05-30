@@ -64,9 +64,13 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
         }
 
         setRide(data.ride);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          setError(err.message || "Error de conexión");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name !== "AbortError") {
+            setError(err.message || "Error de conexión");
+          }
+        } else {
+          setError("Error de conexión");
         }
       } finally {
         setLoading(false);
@@ -110,9 +114,13 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
           setBooking(null);
           setReservationSeats(1);
         }
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          setActionError(err.message || "Error de conexión");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name !== "AbortError") {
+            setActionError(err.message || "Error de conexión");
+          }
+        } else {
+          setActionError("Error de conexión");
         }
       } finally {
         setLoadingBooking(false);
@@ -300,7 +308,7 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
             <p className="font-bold text-gray-900 text-xl">{ride.availableSeats}</p>
           </div>
           <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg">
-            <p className="text-sm text-gray-500 font-semibold mb-1">Notas</p>
+            <p className="text-sm text-gray-500 font-semibold mb-1">Notes</p>
             <p className="text-sm text-gray-700">Sin notas adicionales proporcionadas por el conductor.</p>
           </div>
         </div>
