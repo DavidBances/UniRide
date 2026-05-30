@@ -85,6 +85,50 @@ func TestCreateRideRejectsInvalidSeats(t *testing.T) {
 	}
 }
 
+func TestCreateRideRejectsPastDate(t *testing.T) {
+	router, _ := setupRideRouter(t)
+	body := `{
+		"origin": "Madrid",
+		"destination": "Barcelona",
+		"departureDate": "2020-05-20T08:30:00Z",
+		"availableSeats": 3,
+		"price": 12.50
+	}`
+
+	request := httptest.NewRequest(http.MethodPost, "/rides", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
+	}
+}
+
+func TestCreateRideRejectsMissingOriginOrDestination(t *testing.T) {
+	router, _ := setupRideRouter(t)
+	body := `{
+		"origin": "",
+		"destination": "Barcelona",
+		"departureDate": "2099-05-20T08:30:00Z",
+		"availableSeats": 3,
+		"price": 12.50
+	}`
+
+	request := httptest.NewRequest(http.MethodPost, "/rides", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.Code)
+	}
+}
+
 func TestListRidesAppliesFilters(t *testing.T) {
 	router, repo := setupRideRouter(t)
 
@@ -177,6 +221,37 @@ func TestGetRideByIDReturns404WhenMissing(t *testing.T) {
 	}
 }
 
+func TestListCurrentUserRidesRequiresAuthentication(t *testing.T) {
+	router, _ := setupRideRouter(t)
+
+	request := httptest.NewRequest(http.MethodGet, "/me/rides", nil)
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, response.Code)
+	}
+}
+
+func TestListCurrentUserRidesUsesAuthenticatedUserID(t *testing.T) {
+	router, repo := setupRideRouter(t)
+
+	request := httptest.NewRequest(http.MethodGet, "/me/rides", nil)
+	request.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusOK, response.Code, response.Body.String())
+	}
+
+	if repo.driverID != 42 {
+		t.Fatalf("expected driver id 42, got %d", repo.driverID)
+	}
+}
+
 func setupRideRouter(t *testing.T) (*gin.Engine, *fakeTripRepository) {
 	t.Helper()
 
@@ -187,6 +262,9 @@ func setupRideRouter(t *testing.T) (*gin.Engine, *fakeTripRepository) {
 	router := gin.New()
 	group := router.Group("/rides")
 	handler.RegisterRoutes(group, auth.Middleware("test-secret"))
+
+	meGroup := router.Group("/me", auth.Middleware("test-secret"))
+	meGroup.GET("/rides", handler.ListCurrentUserRides)
 
 	return router, repo
 }
@@ -214,6 +292,7 @@ type fakeTripRepository struct {
 	detail    *domain.RideDetails
 	detailErr error
 	filters   domain.TripFilters
+	driverID  int64
 }
 
 func (r *fakeTripRepository) Create(_ context.Context, trip *domain.Trip) error {
@@ -222,6 +301,24 @@ func (r *fakeTripRepository) Create(_ context.Context, trip *domain.Trip) error 
 	r.created = trip
 
 	return nil
+}
+
+func (r *fakeTripRepository) ListByDriverID(_ context.Context, driverID int64) ([]*domain.Trip, error) {
+	r.driverID = driverID
+	return []*domain.Trip{
+		{
+			ID:             10,
+			DriverID:       driverID,
+			Origin:         "Madrid",
+			Destination:    "Barcelona",
+			DepartureDate:  time.Date(2099, 5, 20, 8, 30, 0, 0, time.UTC),
+			AvailableSeats: 3,
+			PricePerSeat:   12.50,
+			Status:         "open",
+			CreatedAt:      time.Now(),
+			BookingsCount:  2,
+		},
+	}, nil
 }
 
 func (r *fakeTripRepository) GetByID(_ context.Context, _ int64) (*domain.Trip, error) {
@@ -252,4 +349,8 @@ func (r *fakeTripRepository) ListOpenTrips(_ context.Context, filters domain.Tri
 			CreatedAt:      time.Now(),
 		},
 	}, nil
+}
+
+func (r *fakeTripRepository) Update(_ context.Context, _ *domain.Trip) error {
+	return nil
 }

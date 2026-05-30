@@ -6,6 +6,8 @@ import Login from "./Login";
 import ProfilePage from "./ProfilePage";
 import Register from "./Register";
 import RidesPage from "./RidesPage";
+import RideDetailsPage from "./RideDetailsPage";
+import CreateRide from "./CreateRide";
 
 const pageTitles: Record<string, string> = {
   "/": "UniRide",
@@ -24,7 +26,11 @@ function App() {
   const hasToken = Boolean(getStoredToken());
 
   useEffect(() => {
-    document.title = pageTitles[currentPath] ?? "UniRide";
+    if (currentPath.startsWith("/rides/") && currentPath.length > 7) {
+      document.title = "UniRide | Ride Details";
+    } else {
+      document.title = pageTitles[currentPath] ?? "UniRide";
+    }
   }, [currentPath]);
 
   useEffect(() => {
@@ -41,6 +47,11 @@ function renderPage(path: string, hasToken: boolean) {
     return <RedirectingPrivatePage />;
   }
 
+  if (path.startsWith("/rides/") && path.length > 7) {
+    const rideId = path.split("/")[2];
+    if (rideId) return <RideDetailsPage rideId={rideId} />;
+  }
+
   switch (path) {
     case "/":
       return <HomePage />;
@@ -51,16 +62,16 @@ function renderPage(path: string, hasToken: boolean) {
     case "/rides":
       return <RidesPage />;
     case "/create-ride":
-      return (
-        <PlaceholderPage
-          title="Create ride"
-          description="Ride creation page ready for future implementation."
-        />
-      );
+      return <CreateRide />;
     case "/profile":
       return <ProfilePage />;
     case "/placeholder":
-      return <ProfilePage />;
+      return (
+        <PlaceholderPage
+          title="Placeholder"
+          description="This page is reserved for future features."
+        />
+      );
     default:
       return <NotFoundPage />;
   }

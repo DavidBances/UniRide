@@ -14,6 +14,7 @@ type Booking struct {
 	Status        string
 	CreatedAt     time.Time
 	Ride          BookingRideSummary
+	Passenger     BookingPassengerSummary
 }
 
 // BookingRideSummary contains the ride fields needed by profile/dashboard views.
@@ -28,9 +29,18 @@ type BookingRideSummary struct {
 	ReviewCount   int
 }
 
+// BookingPassengerSummary contains the passenger fields needed by driver views.
+type BookingPassengerSummary struct {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // BookingRepository defines data access for user bookings.
 type BookingRepository interface {
 	ListByUserID(ctx context.Context, userID int64) ([]*Booking, error)
+	ListByRideID(ctx context.Context, rideID int64) ([]*Booking, error)
 	Create(ctx context.Context, booking *Booking) error
 	DeleteByID(ctx context.Context, bookingID int64) error
 	GetByID(ctx context.Context, bookingID int64) (*Booking, error)

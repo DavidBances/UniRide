@@ -139,3 +139,11 @@ func (r *fakeReviewTripRepository) GetRideDetailsByID(_ context.Context, _ int64
 func (r *fakeReviewTripRepository) ListOpenTrips(_ context.Context, filters domain.TripFilters) ([]*domain.Trip, error) {
 	return nil, nil
 }
+
+func (r *fakeReviewTripRepository) Update(_ context.Context, _ *domain.Trip) error {
+	return nil
+}
+
+func (r *fakeReviewTripRepository) ListByDriverID(_ context.Context, _ int64) ([]*domain.Trip, error) {
+	return nil, nil
+}
