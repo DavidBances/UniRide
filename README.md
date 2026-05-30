@@ -64,10 +64,52 @@ go install github.com/air-verse/air@latest
 
 ## Environment Variables (.env)
 
-This project expects a root `.env` file for PostgreSQL. If you dont have the file, ask a colaborator for the values.
+Copy the example files before running locally:
 
-Backend defaults are defined in `backend/internal/config/config.go`, so the API can also read equivalent DB values from `DB_*` variables if needed.
+- Root `.env.example` for backend and PostgreSQL values
+- `frontend/.env.example` for the frontend API URL
 
+Required backend variables:
+
+- `PORT`
+- `JWT_SECRET`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+
+Recommended deployment variables:
+
+- `GIN_MODE=release`
+- `CORS_ALLOW_ORIGIN` set to the deployed frontend URL
+- `DB_SSLMODE=require` in hosted environments
+- `RUN_DB_MIGRATIONS=true` only when the deployment should apply the schema on startup
+- `VITE_API_BASE_URL` set to the deployed backend URL for the frontend build
+
+Secrets such as `JWT_SECRET` and database credentials should be stored in the platform's secret or environment settings, not committed to the repository.
+
+Backend config is loaded from environment variables in `backend/internal/config/config.go`.
+
+### Email Notifications
+
+To enable booking confirmation and cancellation emails, configure an SMTP provider (e.g., Mailtrap, SendGrid, Gmail) by adding the following to your `.env`:
+
+- `SMTP_HOST` (e.g., `smtp.mailtrap.io`)
+- `SMTP_PORT` (e.g., `587`)
+- `SMTP_USER`
+- `SMTP_PASS`
+
+If these are not set, the system will log the intended notification and safely skip sending without blocking the booking flow.
+
+## Production Deployment
+
+The Render blueprint in `render.yaml` defines the backend and frontend services. Set the following values in the platform dashboard or secret store:
+
+- Backend service: `JWT_SECRET`, `CORS_ALLOW_ORIGIN`, database credentials, `DB_SSLMODE`, and optionally `RUN_DB_MIGRATIONS`
+- Frontend service: `VITE_API_BASE_URL`
+
+The backend refuses to start if required deployment values are missing, which helps catch misconfigured production environments early.
 ## Run Locally
 
 Open separate terminals from the repository root.

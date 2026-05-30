@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiUrl } from "./api";
+import { getStoredToken } from "./authToken";
 
 type RideDetail = {
   id: number;
@@ -16,10 +17,37 @@ type RideDetail = {
   };
 };
 
+type RideBooking = {
+  id: number;
+  rideId: number;
+  seatsReserved: number;
+  status: string;
+};
+
+type BookingsResponse = {
+  bookings?: Array<{
+    id: number;
+    seatsReserved: number;
+    status: string;
+    ride: {
+      id: number;
+    };
+  }>;
+  error?: string;
+};
+
 export default function RideDetailsPage({ rideId }: { rideId: string }) {
   const [ride, setRide] = useState<RideDetail | null>(null);
+  const [booking, setBooking] = useState<RideBooking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingBooking, setLoadingBooking] = useState(false);
   const [error, setError] = useState("");
+  const [reservationSeats, setReservationSeats] = useState(1);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+
+  const token = getStoredToken();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -45,10 +73,163 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
       }
     };
 
+    const fetchCurrentBooking = async () => {
+      if (!token) {
+        setBooking(null);
+        setLoadingBooking(false);
+        return;
+      }
+
+      setLoadingBooking(true);
+
+      try {
+        const response = await fetch(apiUrl("/api/me/bookings"), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        const data = (await response.json()) as BookingsResponse;
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "No se pudieron cargar tus reservas.");
+        }
+
+        const currentBooking = data.bookings?.find((item) => item.ride.id === Number(rideId));
+
+        if (currentBooking) {
+          setBooking({
+            id: currentBooking.id,
+            rideId: currentBooking.ride.id,
+            seatsReserved: currentBooking.seatsReserved,
+            status: currentBooking.status,
+          });
+          setReservationSeats(currentBooking.seatsReserved);
+        } else {
+          setBooking(null);
+          setReservationSeats(1);
+        }
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          setActionError(err.message || "Error de conexión");
+        }
+      } finally {
+        setLoadingBooking(false);
+      }
+    };
+
     void fetchRide();
+    void fetchCurrentBooking();
 
     return () => controller.abort();
-  }, [rideId]);
+  }, [rideId, token]);
+
+  const isRideFull = Boolean(ride && (ride.availableSeats === 0 || ride.status === "full"));
+
+  const handleReserve = async () => {
+    if (!ride || !token) {
+      setActionError("Debes iniciar sesión para reservar.");
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const response = await fetch(apiUrl("/api/bookings"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rideId: ride.id,
+          seatsReserved: reservationSeats,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+        booking?: { id: number; rideId: number; seatsReserved: number; status: string };
+      };
+
+      if (!response.ok) {
+        setActionError(data.error ?? "No se pudo hacer la reserva.");
+        return;
+      }
+
+      setRide((current) =>
+        current
+          ? {
+              ...current,
+              availableSeats: Math.max(0, current.availableSeats - reservationSeats),
+              status: Math.max(0, current.availableSeats - reservationSeats) === 0 ? "full" : current.status,
+            }
+          : current
+      );
+
+      if (data.booking) {
+        setBooking(data.booking);
+      } else {
+        setBooking({
+          id: 0,
+          rideId: ride.id,
+          seatsReserved: reservationSeats,
+          status: "confirmed",
+        });
+      }
+
+      setActionSuccess(data.message ?? "Reserva confirmada correctamente.");
+    } catch {
+      setActionError("Error de conexión al servidor.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!booking || !token) return;
+
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const response = await fetch(apiUrl(`/api/bookings/${booking.id}`), {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        setActionError(data.error ?? "No se pudo cancelar la reserva.");
+        return;
+      }
+
+      setRide((current) =>
+        current
+          ? {
+              ...current,
+              availableSeats: current.availableSeats + booking.seatsReserved,
+              status: current.availableSeats + booking.seatsReserved > 0 ? "open" : current.status,
+            }
+          : current
+      );
+      setBooking(null);
+      setReservationSeats(1);
+      setActionSuccess(data.message ?? "Reserva cancelada correctamente.");
+    } catch {
+      setActionError("Error de conexión al servidor.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -94,10 +275,13 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
               })}
             </p>
           </div>
-          <span className={`rounded-md px-3 py-1 text-sm font-bold w-fit ${ride.status === "open" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-700"}`}>
-            {ride.status.toUpperCase()}
+          <span className={`rounded-md px-3 py-1 text-sm font-bold w-fit ${isRideFull ? "bg-red-50 text-red-700" : ride.status === "open" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-700"}`}>
+            {isRideFull ? "Full" : ride.status.toUpperCase()}
           </span>
         </div>
+
+        {actionError && <p className="message message-error mb-4">{actionError}</p>}
+        {actionSuccess && <p className="message message-success mb-4">{actionSuccess}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg">
@@ -122,18 +306,56 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
         </div>
 
         <div className="border-t border-gray-200 pt-6">
-          <button 
-            className="btn btn-primary w-full text-lg py-3" 
-            type="button"
-            disabled={ride.availableSeats === 0 || ride.status !== "open"}
-            onClick={() => alert("El flujo de reservas interactivo se activará en el próximo Sprint de Bookings.")}
-          >
-            {ride.status !== "open" 
-              ? "Viaje completado / cerrado" 
-              : ride.availableSeats === 0 
-              ? "No quedan plazas" 
-              : "Solicitar reserva (Placeholder)"}
-          </button>
+          {token ? (
+            booking ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <p className="text-sm font-semibold text-gray-700">Ya tienes una reserva para este viaje.</p>
+                <p className="mt-1 text-sm text-gray-600">Asientos reservados: {booking.seatsReserved}</p>
+                <button
+                  className="btn bg-red-50 text-red-700 hover:bg-red-100 mt-4 w-full text-lg py-3"
+                  type="button"
+                  onClick={handleCancelBooking}
+                  disabled={actionLoading || loadingBooking}
+                >
+                  {actionLoading ? "Cancelando..." : "Cancelar reserva"}
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <label className="text-label" htmlFor="ride-details-seats">
+                  Número de plazas
+                </label>
+                <input
+                  id="ride-details-seats"
+                  className="input mt-2"
+                  type="number"
+                  min="1"
+                  max={ride.availableSeats}
+                  value={reservationSeats}
+                  onChange={(event) => {
+                    const nextValue = Math.max(1, Math.min(ride.availableSeats, Number(event.target.value) || 1));
+                    setReservationSeats(nextValue);
+                  }}
+                  disabled={isRideFull}
+                />
+                <button
+                  className="btn btn-primary w-full text-lg py-3 mt-4"
+                  type="button"
+                  onClick={handleReserve}
+                  disabled={actionLoading || loadingBooking || isRideFull}
+                >
+                  {loadingBooking ? "Comprobando reserva..." : actionLoading ? "Reservando..." : isRideFull ? "Viaje lleno" : "Reservar"}
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-600">Inicia sesión para reservar desde esta pantalla.</p>
+              <Link className="btn btn-primary mt-4 w-full text-lg py-3 inline-flex justify-center" to="/login">
+                Ir a login
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </section>

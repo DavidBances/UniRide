@@ -35,9 +35,9 @@ func Load() (*Config, error) {
 		Port:            getEnv("PORT", "8080"),
 		GinMode:         getEnv("GIN_MODE", "debug"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
-		JWTSecret:       getEnv("JWT_SECRET", "dev-jwt-secret-change-me"),
+		JWTSecret:       getEnv("JWT_SECRET", ""),
 		DBSchemaPath:    getEnv("DB_SCHEMA_PATH", "db/init.sql"),
-		DBHost:          getEnv("DB_HOST", getEnv("POSTGRES_HOST", "localhost")),
+		DBHost:          getEnv("DB_HOST", getEnv("POSTGRES_HOST", "")),
 		DBPort:          getEnv("DB_PORT", getEnv("POSTGRES_PORT", "5432")),
 		DBUser:          getEnv("DB_USER", getEnv("POSTGRES_USER", "")),
 		DBPassword:      getEnv("DB_PASSWORD", getEnv("POSTGRES_PASSWORD", "")),
@@ -64,6 +64,7 @@ func (c *Config) Validate() error {
 
 	requiredValues := map[string]string{
 		"PORT":        c.Port,
+		"JWT_SECRET":  c.JWTSecret,
 		"DB_HOST":     c.DBHost,
 		"DB_USER":     c.DBUser,
 		"DB_PASSWORD": c.DBPassword,
