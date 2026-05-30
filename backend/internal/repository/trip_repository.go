@@ -214,7 +214,7 @@ func (r *tripRepository) Update(ctx context.Context, trip *domain.Trip) error {
 	res, err := r.db.ExecContext(
 		ctx,
 		`UPDATE ride
-		 SET origin = $1, destination = $2, departure_date = $3, available_seats = $4, price_per_seat = $5, status = $6, updated_at = CURRENT_TIMESTAMP
+		 SET origin = $1, destination = $2, departure_date = $3, available_seats = $4, price_per_seat = $5, status = $6
 		 WHERE id = $7`,
 		trip.Origin,
 		trip.Destination,

@@ -17,6 +17,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/bookings"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/domain"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
 )
 
 // --- In-Memory Repositories para Integración ---
@@ -95,6 +96,10 @@ type inMemoryBookingRepo struct {
 	nextID   int64
 }
 
+type inMemoryUserRepo struct {
+	users map[int64]users.User
+}
+
 func (r *inMemoryBookingRepo) Create(ctx context.Context, booking *domain.Booking) error {
 	r.nextID++
 	booking.ID = r.nextID
@@ -125,6 +130,24 @@ func (r *inMemoryBookingRepo) ListByUserID(ctx context.Context, userID int64) ([
 	return result, nil
 }
 
+func (r *inMemoryBookingRepo) ListByRideID(ctx context.Context, rideID int64) ([]*domain.Booking, error) {
+	var result []*domain.Booking
+	for _, b := range r.bookings {
+		if b.RideID == rideID {
+			result = append(result, b)
+		}
+	}
+	return result, nil
+}
+
+func (r *inMemoryUserRepo) GetByID(ctx context.Context, id int64) (users.User, error) {
+	if user, ok := r.users[id]; ok {
+		return user, nil
+	}
+
+	return users.User{}, users.ErrUserNotFound
+}
+
 func testToken(userID int64) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"user_id": userID, "exp": time.Now().Add(time.Hour).Unix()})
 	s, _ := token.SignedString([]byte("test-secret"))
@@ -139,9 +162,13 @@ func TestBusinessFlows(t *testing.T) {
 
 	tripRepo := &inMemoryTripRepo{trips: make(map[int64]*domain.Trip)}
 	bookRepo := &inMemoryBookingRepo{bookings: make(map[int64]*domain.Booking)}
+	userRepo := &inMemoryUserRepo{users: map[int64]users.User{
+		1: {ID: 1, Username: "driver", Email: "driver@example.com"},
+		2: {ID: 2, Username: "passenger", Email: "passenger@example.com"},
+	}}
 
 	rideHandler := rides.NewHandler(tripRepo, nil)
-	bookingHandler := bookings.NewHandler(bookRepo, tripRepo, nil)
+	bookingHandler := bookings.NewHandler(bookRepo, tripRepo, userRepo, nil)
 
 	authMiddleware := auth.Middleware("test-secret")
 

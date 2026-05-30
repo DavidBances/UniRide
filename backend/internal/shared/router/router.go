@@ -2,6 +2,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/bookings"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/reviews"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/rides"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/httpx"
 )
 
 // Dependencies contains the handlers required by the HTTP router.
@@ -24,7 +26,7 @@ type Dependencies struct {
 // New creates and configures the HTTP router.
 func New(dependencies Dependencies) *gin.Engine {
 	engine := gin.New()
-	engine.Use(gin.Logger(), gin.Recovery())
+	engine.Use(requestIDMiddleware(), gin.Logger(), recoveryMiddleware(slog.Default()))
 	engine.Use(corsMiddleware(dependencies.CORSAllowOrigin))
 
 	// Global rate limiting: 10 requests per second, burst of 20
@@ -35,7 +37,7 @@ func New(dependencies Dependencies) *gin.Engine {
 	authLimiter := RateLimitMiddleware(1, 5)
 
 	engine.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		httpx.Success(c, http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	authGroup := engine.Group("/auth", authLimiter)
@@ -44,7 +46,7 @@ func New(dependencies Dependencies) *gin.Engine {
 
 	api := engine.Group("/api")
 	api.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
+		httpx.Success(c, http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
 
 	// Temporary backward-compatible route for existing frontend calls.
@@ -61,10 +63,12 @@ func New(dependencies Dependencies) *gin.Engine {
 	apiMeGroup := api.Group("/me", auth.Middleware(dependencies.JWTSecret))
 	apiMeGroup.GET("/bookings", dependencies.BookingHandler.ListCurrentUser)
 	apiMeGroup.GET("/rides", dependencies.RideHandler.ListCurrentUserRides)
+	apiMeGroup.GET("/rides/:rideId/bookings", dependencies.BookingHandler.ListRideBookings)
 
 	meGroup := engine.Group("/me", auth.Middleware(dependencies.JWTSecret))
 	meGroup.GET("/bookings", dependencies.BookingHandler.ListCurrentUser)
 	meGroup.GET("/rides", dependencies.RideHandler.ListCurrentUserRides)
+	meGroup.GET("/rides/:rideId/bookings", dependencies.BookingHandler.ListRideBookings)
 
 	ridesGroup := api.Group("/rides")
 	dependencies.RideHandler.RegisterRoutes(ridesGroup, auth.Middleware(dependencies.JWTSecret))

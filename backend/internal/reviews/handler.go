@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/domain"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/httpx"
 )
 
 const requestTimeout = 5 * time.Second
@@ -50,7 +51,7 @@ func (h *Handler) RegisterRoutes(routeGroup *gin.RouterGroup, authMiddleware gin
 func (h *Handler) Create(c *gin.Context) {
 	var req createReviewRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "rideId and rating between 1 and 5 are required"})
+		httpx.Error(c, http.StatusBadRequest, "invalid_review_payload", "rideId and rating between 1 and 5 are required", httpx.ValidationDetails(err))
 		return
 	}
 
@@ -62,22 +63,22 @@ func (h *Handler) Create(c *gin.Context) {
 	ride, err := h.tripRepository.GetByID(ctx, req.RideID)
 	if err != nil {
 		if errors.Is(err, domain.ErrRideNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
+			httpx.Error(c, http.StatusNotFound, "ride_not_found", "ride not found", nil)
 			return
 		}
 
-		h.logger.Error("failed to get ride for review", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get ride"})
+		h.logger.Error("failed to get ride for review", "error", err, "path", c.FullPath(), "method", c.Request.Method, "request_id", c.GetString("requestID"), "ride_id", req.RideID)
+		httpx.Error(c, http.StatusInternalServerError, "internal_server_error", "failed to get ride", nil)
 		return
 	}
 
 	if ride.Status != "completed" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "only completed rides can be reviewed"})
+		httpx.Error(c, http.StatusBadRequest, "ride_not_completed", "only completed rides can be reviewed", nil)
 		return
 	}
 
 	if ride.DriverID == reviewerID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "drivers cannot review their own rides"})
+		httpx.Error(c, http.StatusBadRequest, "self_review_not_allowed", "drivers cannot review their own rides", nil)
 		return
 	}
 
@@ -90,12 +91,12 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	if err := h.reviewRepository.Create(ctx, review); err != nil {
-		h.logger.Error("failed to create review", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create review"})
+		h.logger.Error("failed to create review", "error", err, "path", c.FullPath(), "method", c.Request.Method, "request_id", c.GetString("requestID"), "ride_id", req.RideID, "reviewer_id", reviewerID)
+		httpx.Error(c, http.StatusInternalServerError, "internal_server_error", "failed to create review", nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	httpx.Success(c, http.StatusCreated, gin.H{
 		"message": "review created successfully",
 		"review": gin.H{
 			"id":             review.ID,

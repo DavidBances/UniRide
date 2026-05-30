@@ -74,7 +74,7 @@ func main() {
 	bookingRepository := repository.NewBookingRepository(db)
 	reviewRepository := repository.NewReviewRepository(db)
 	rideHandler := rides.NewHandler(tripRepository, logger)
-	bookingHandler := bookings.NewHandler(bookingRepository, tripRepository, logger)
+	bookingHandler := bookings.NewHandler(bookingRepository, tripRepository, userRepository, logger)
 	reviewHandler := reviews.NewHandler(reviewRepository, tripRepository, logger)
 
 	gin.SetMode(cfg.GinMode)

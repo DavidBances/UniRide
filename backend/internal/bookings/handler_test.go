@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/domain"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
 )
 
 func TestCreateBookingSuccess(t *testing.T) {
@@ -169,6 +170,9 @@ func (r *fakeBookingRepository) DeleteByID(ctx context.Context, id int64) error 
 func (r *fakeBookingRepository) ListByUserID(ctx context.Context, userID int64) ([]*domain.Booking, error) {
 	return nil, nil
 }
+func (r *fakeBookingRepository) ListByRideID(ctx context.Context, rideID int64) ([]*domain.Booking, error) {
+	return nil, nil
+}
 
 func setupRouter(t *testing.T) (*gin.Engine, *fakeBookingRepository, *fakeTripRepository) {
 	t.Helper()
@@ -176,11 +180,26 @@ func setupRouter(t *testing.T) (*gin.Engine, *fakeBookingRepository, *fakeTripRe
 
 	br := &fakeBookingRepository{bookings: make(map[int64]*domain.Booking)}
 	tr := &fakeTripRepository{}
-	handler := NewHandler(br, tr, nil)
+	ur := &fakeUserRepository{users: map[int64]users.User{
+		42: {ID: 42, Username: "test-user", Email: "test@example.com"},
+	}}
+	handler := NewHandler(br, tr, ur, nil)
 
 	router := gin.New()
 	handler.RegisterRoutes(router.Group("/bookings"), auth.Middleware("test-secret"))
 	return router, br, tr
+}
+
+type fakeUserRepository struct {
+	users map[int64]users.User
+}
+
+func (r *fakeUserRepository) GetByID(ctx context.Context, id int64) (users.User, error) {
+	if user, ok := r.users[id]; ok {
+		return user, nil
+	}
+
+	return users.User{}, users.ErrUserNotFound
 }
 
 func testToken(t *testing.T, userID int64) string {

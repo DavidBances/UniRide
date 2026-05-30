@@ -109,6 +109,35 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (User, error
 	return user, nil
 }
 
+// GetByID returns a user by ID.
+func (r *Repository) GetByID(ctx context.Context, id int64) (User, error) {
+	var user User
+
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT id, username, email, password_hash, created_at
+		 FROM users
+		 WHERE id = $1`,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, ErrUserNotFound
+		}
+
+		return User{}, fmt.Errorf("failed to find user by id: %w", err)
+	}
+
+	return user, nil
+}
+
 // UpsertDefaultUser creates or updates a default user.
 // This is useful for local development and demos.
 func (r *Repository) UpsertDefaultUser(ctx context.Context, username string, email string, passwordHash string) error {

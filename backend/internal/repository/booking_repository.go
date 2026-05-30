@@ -81,6 +81,78 @@ func (r *bookingRepository) ListByUserID(ctx context.Context, userID int64) ([]*
 	return bookings, nil
 }
 
+func (r *bookingRepository) ListByRideID(ctx context.Context, rideID int64) ([]*domain.Booking, error) {
+	rows, err := r.db.QueryContext(
+		ctx,
+		`SELECT
+			b.id,
+			b.ride_id,
+			b.user_id,
+			b.seats_reserved,
+			b.status,
+			b.created_at,
+			u.id,
+			u.username,
+			u.email,
+			u.created_at,
+			rd.id,
+			rd.origin,
+			rd.destination,
+			rd.departure_date,
+			rd.price_per_seat,
+			rd.status,
+			COALESCE(ROUND(AVG(rv.rating)::numeric, 1), 0)::float8 AS average_rating,
+			COUNT(rv.id)::int AS review_count
+		 FROM bookings b
+		 INNER JOIN ride rd ON rd.id = b.ride_id
+		 INNER JOIN users u ON u.id = b.user_id
+		 LEFT JOIN reviews rv ON rv.ride_id = rd.id
+		 WHERE b.ride_id = $1
+		 GROUP BY b.id, u.id, rd.id
+		 ORDER BY b.created_at DESC`,
+		rideID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list ride bookings: %w", err)
+	}
+	defer rows.Close()
+
+	bookings := []*domain.Booking{}
+	for rows.Next() {
+		var booking domain.Booking
+		if err := rows.Scan(
+			&booking.ID,
+			&booking.RideID,
+			&booking.UserID,
+			&booking.SeatsReserved,
+			&booking.Status,
+			&booking.CreatedAt,
+			&booking.Passenger.ID,
+			&booking.Passenger.Username,
+			&booking.Passenger.Email,
+			&booking.Passenger.CreatedAt,
+			&booking.Ride.ID,
+			&booking.Ride.Origin,
+			&booking.Ride.Destination,
+			&booking.Ride.DepartureDate,
+			&booking.Ride.Price,
+			&booking.Ride.Status,
+			&booking.Ride.AverageRating,
+			&booking.Ride.ReviewCount,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan ride booking: %w", err)
+		}
+
+		bookings = append(bookings, &booking)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read ride bookings: %w", err)
+	}
+
+	return bookings, nil
+}
+
 func (r *bookingRepository) Create(ctx context.Context, booking *domain.Booking) error {
 	err := r.db.QueryRowContext(
 		ctx,

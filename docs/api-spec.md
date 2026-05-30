@@ -55,7 +55,7 @@ The API is designed for the **UniRide MVP** and will be implemented using:
 All endpoints are exposed under:
 
 ```
-/api/v1
+/api
 ```
 
 ---
@@ -82,24 +82,35 @@ Authorization: Bearer <token>
 
 ## Common Response Format
 
+The backend uses a standardized JSON shape for responses. The format is backward-compatible with a simple `error` field while providing additional metadata.
+
 ### Successful Response
+
+Examples of success responses include a `success` boolean and the payload fields directly in the JSON object. Example:
 
 ```json
 {
-  "data": {}
+  "success": true,
+  "message": "ride created successfully",
+  "ride": { /* ... */ }
 }
 ```
 
 ### Error Response
 
+Error responses include `success: false`, an `error` message, a machine-friendly `code` and optional `details` and `requestId` for tracing.
+
 ```json
 {
-  "error": {
-    "code": "string_code",
-    "message": "Human-readable message"
-  }
+  "success": false,
+  "error": "invalid_token",
+  "code": "invalid_token",
+  "details": { /* optional */ },
+  "requestId": "..."
 }
 ```
+
+Include the `requestId` in support requests — it is emitted by the server and appears in logs to correlate requests with traces.
 
 ---
 

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { clearStoredToken, getStoredToken, onAuthTokenChanged } from '../authToken';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [token, setToken] = useState(() => getStoredToken());
   const location = useLocation();
+  const navigate = useNavigate();
   const closeMenu = () => setIsOpen(false);
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `rounded-md px-3 py-2 text-sm font-bold transition ${
@@ -15,6 +18,8 @@ export default function Navbar() {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => onAuthTokenChanged(() => setToken(getStoredToken())), []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -28,6 +33,15 @@ export default function Navbar() {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen]);
+
+  const handleLogout = () => {
+    clearStoredToken();
+    setToken("");
+    setIsOpen(false);
+    navigate("/login");
+  };
+
+  const isAuthenticated = Boolean(token);
 
   return (
     <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur" aria-label="Main navigation">
@@ -43,8 +57,14 @@ export default function Navbar() {
             <NavLink to="/rides" className={navLinkClass}>Find Ride</NavLink>
             <NavLink to="/create-ride" className={navLinkClass}>Publish Ride</NavLink>
             <NavLink to="/profile" className={navLinkClass}>Profile</NavLink>
-            <NavLink to="/register" className={navLinkClass}>Register</NavLink>
-            <NavLink to="/login" className="btn btn-primary">Login</NavLink>
+            {!isAuthenticated && <NavLink to="/register" className={navLinkClass}>Register</NavLink>}
+            {isAuthenticated ? (
+              <button className="btn btn-primary" type="button" onClick={handleLogout}>
+                Cerrar sesión
+              </button>
+            ) : (
+              <NavLink to="/login" className="btn btn-primary">Login</NavLink>
+            )}
           </div>
 
           <div className="flex items-center md:hidden">
@@ -74,8 +94,14 @@ export default function Navbar() {
             <NavLink to="/rides" className={navLinkClass} onClick={closeMenu}>Find Ride</NavLink>
             <NavLink to="/create-ride" className={navLinkClass} onClick={closeMenu}>Publish Ride</NavLink>
             <NavLink to="/profile" className={navLinkClass} onClick={closeMenu}>Profile</NavLink>
-            <NavLink to="/register" className={navLinkClass} onClick={closeMenu}>Register</NavLink>
-            <NavLink to="/login" className="btn btn-primary mt-2 text-center" onClick={closeMenu}>Login</NavLink>
+            {!isAuthenticated && <NavLink to="/register" className={navLinkClass} onClick={closeMenu}>Register</NavLink>}
+            {isAuthenticated ? (
+              <button className="btn btn-primary mt-2 text-center" type="button" onClick={handleLogout}>
+                Cerrar sesión
+              </button>
+            ) : (
+              <NavLink to="/login" className="btn btn-primary mt-2 text-center" onClick={closeMenu}>Login</NavLink>
+            )}
           </div>
         </div>
       )}

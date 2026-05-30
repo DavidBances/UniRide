@@ -15,18 +15,32 @@ describe("ProfilePage", () => {
     cleanup();
   });
 
-  it("shows user info, quick stats and dashboard navigation", async () => {
+  it("shows bookings and published rides with useful details", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).endsWith("/api/private/me")) {
+      if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
           json: async () => ({
-            user: {
-              id: 7,
-              username: "Ada",
-              email: "ada@uni.es",
-            },
+            bookings: [
+              {
+                id: 1,
+                seatsReserved: 2,
+                status: "confirmed",
+                createdAt: "2026-05-01T10:00:00Z",
+                ride: {
+                  id: 10,
+                  route: "Leon to Madrid",
+                  origin: "Leon",
+                  destination: "Madrid",
+                  date: "2026-05-20T10:00:00Z",
+                  price: 12.5,
+                  status: "open",
+                  averageRating: 4.5,
+                  reviewCount: 2,
+                },
+              },
+            ],
           }),
         } as Response;
       }
@@ -34,23 +48,16 @@ describe("ProfilePage", () => {
       return {
         ok: true,
         json: async () => ({
-          bookings: [
+          rides: [
             {
-              id: 1,
-              seatsReserved: 2,
-              status: "confirmed",
-              createdAt: "2026-05-01T10:00:00Z",
-              ride: {
-                id: 10,
-                route: "Leon to Madrid",
-                origin: "Leon",
-                destination: "Madrid",
-                date: "2026-05-20T10:00:00Z",
-                price: 12.5,
-                status: "open",
-                averageRating: 4.5,
-                reviewCount: 2,
-              },
+              id: 20,
+              origin: "Madrid",
+              destination: "Barcelona",
+              departureDate: "2026-05-20T08:30:00Z",
+              availableSeats: 3,
+              price: 14,
+              status: "open",
+              bookingsCount: 2,
             },
           ],
         }),
@@ -63,47 +70,43 @@ describe("ProfilePage", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole("heading", { name: "Welcome, Ada" })).toBeTruthy();
-    expect(screen.getByText("ada@uni.es")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "My bookings" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "My rides" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
-    expect(screen.getByText("Leon to Madrid")).toBeTruthy();
-    expect(screen.getByText("Reserved seats")).toBeTruthy();
-    expect(screen.getByText("4.5/5 (2)")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/private/me",
-      expect.objectContaining({
-        headers: { Authorization: "Bearer token-123" },
-      })
-    );
+    expect(await screen.findByText("Leon to Madrid")).toBeTruthy();
+    expect(screen.getByText("Asientos")).toBeTruthy();
+    expect(screen.getByText("Viaje publicado")).toBeTruthy();
+    expect(screen.getByText("Ruta")).toBeTruthy();
+    expect(screen.getByText("Fecha")).toBeTruthy();
+    expect(screen.getByText("Asientos libres")).toBeTruthy();
+    expect(screen.getByText("Reservas")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ver reservas" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancelar publicación" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Editar viaje" })).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/me/bookings",
       expect.objectContaining({
         headers: { Authorization: "Bearer token-123" },
       })
     );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/me/rides",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer token-123" },
+      })
+    );
   });
 
-  it("shows empty bookings state", async () => {
+  it("shows empty states when there are no bookings or published rides", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).endsWith("/api/private/me")) {
+      if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
-          json: async () => ({
-            user: {
-              id: 7,
-              username: "Ada",
-              email: "ada@uni.es",
-            },
-          }),
+          json: async () => ({ bookings: [] }),
         } as Response;
       }
 
       return {
         ok: true,
-        json: async () => ({ bookings: [] }),
+        json: async () => ({ rides: [] }),
       } as Response;
     });
 
@@ -113,50 +116,47 @@ describe("ProfilePage", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText("You do not have bookings yet.")).toBeTruthy();
-  });
-
-  it("clears the token on logout", async () => {
-    window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        user: {
-          id: 7,
-          username: "Ada",
-          email: "ada@uni.es",
-        },
-        bookings: [],
-      }),
-    } as Response);
-
-    render(
-      <MemoryRouter>
-        <ProfilePage />
-      </MemoryRouter>
-    );
-
-    const logoutButton = await screen.findByRole("button", { name: "Logout" });
-    fireEvent.click(logoutButton);
-
-    await waitFor(() => {
-      expect(window.localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
-    });
+    expect(await screen.findByText("Aún no tienes reservas")).toBeTruthy();
+    expect(screen.getByText("No has publicado viajes")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Buscar viajes" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Publicar viaje" })).toBeTruthy();
   });
 
   it("cancels a booking from the dashboard", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      if (String(input).endsWith("/api/private/me")) {
+      if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
           json: async () => ({
-            user: {
-              id: 7,
-              username: "Ada",
-              email: "ada@uni.es",
-            },
+            bookings: [
+              {
+                id: 1,
+                seatsReserved: 2,
+                status: "confirmed",
+                createdAt: "2026-05-01T10:00:00Z",
+                ride: {
+                  id: 10,
+                  route: "Leon to Madrid",
+                  origin: "Leon",
+                  destination: "Madrid",
+                  date: "2026-05-20T10:00:00Z",
+                  price: 12.5,
+                  status: "open",
+                  averageRating: 0,
+                  reviewCount: 0,
+                },
+              },
+            ],
           }),
+        } as Response;
+      }
+
+      if (String(input).endsWith("/api/me/rides")) {
+        return {
+          ok: true,
+          json: async () => ({ rides: [] }),
         } as Response;
       }
 
@@ -167,30 +167,7 @@ describe("ProfilePage", () => {
         } as Response;
       }
 
-      return {
-        ok: true,
-        json: async () => ({
-          bookings: [
-            {
-              id: 1,
-              seatsReserved: 2,
-              status: "confirmed",
-              createdAt: "2026-05-01T10:00:00Z",
-              ride: {
-                id: 10,
-                route: "Leon to Madrid",
-                origin: "Leon",
-                destination: "Madrid",
-                date: "2026-05-20T10:00:00Z",
-                price: 12.5,
-                status: "open",
-                averageRating: 0,
-                reviewCount: 0,
-              },
-            },
-          ],
-        }),
-      } as Response;
+      throw new Error(`Unexpected fetch call: ${String(input)}`);
     });
 
     render(
@@ -199,7 +176,7 @@ describe("ProfilePage", () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Cancel booking" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
 
     await waitFor(() => {
       expect(screen.queryByText("Leon to Madrid")).toBeNull();
@@ -211,84 +188,5 @@ describe("ProfilePage", () => {
         headers: { Authorization: "Bearer token-123" },
       })
     );
-  });
-
-  it("submits a rating for a completed booking", async () => {
-    window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      if (String(input).endsWith("/api/private/me")) {
-        return {
-          ok: true,
-          json: async () => ({
-            user: {
-              id: 7,
-              username: "Ada",
-              email: "ada@uni.es",
-            },
-          }),
-        } as Response;
-      }
-
-      if (String(input).endsWith("/api/reviews")) {
-        return {
-          ok: true,
-          json: async () => ({ message: "review created successfully" }),
-        } as Response;
-      }
-
-      return {
-        ok: true,
-        json: async () => ({
-          bookings: [
-            {
-              id: 1,
-              seatsReserved: 1,
-              status: "confirmed",
-              createdAt: "2026-05-01T10:00:00Z",
-              ride: {
-                id: 10,
-                route: "Leon to Madrid",
-                origin: "Leon",
-                destination: "Madrid",
-                date: "2026-05-20T10:00:00Z",
-                price: 12.5,
-                status: "completed",
-                averageRating: 0,
-                reviewCount: 0,
-              },
-            },
-          ],
-        }),
-      } as Response;
-    });
-
-    render(
-      <MemoryRouter>
-        <ProfilePage />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(await screen.findByRole("button", { name: "Rate ride" }));
-    fireEvent.change(screen.getByLabelText("Rating"), { target: { value: "4" } });
-    fireEvent.change(screen.getByLabelText("Comment"), { target: { value: "Comfortable trip" } });
-    fireEvent.click(screen.getByRole("button", { name: "Submit review" }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/reviews",
-        expect.objectContaining({
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer token-123",
-          },
-          body: JSON.stringify({
-            rideId: 10,
-            rating: 4,
-            comment: "Comfortable trip",
-          }),
-        })
-      );
-    });
   });
 });
