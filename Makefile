@@ -1,4 +1,4 @@
-.PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e
+.PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e seed
 
 ## Install all dependencies
 install:
@@ -37,3 +37,7 @@ lint:
 ## Run E2E tests (requires backend + frontend running)
 e2e:
 	cd e2e && npx playwright test
+
+## Populate the running database with demo seed data (requires: docker compose up -d)
+seed:
+	docker compose exec -T postgres psql -U UniRideAdmin -d UniRide -f /docker-entrypoint-initdb.d/seeds.sql

@@ -174,6 +174,52 @@ npm run dev
 
 Frontend default URL: `http://localhost:5173`
 
+## Demo Seed Data
+
+The database ships with minimal base data from `db/init.sql` (applied automatically on first `docker compose up`). Run the seed script to load a richer demo dataset suitable for presentations and manual testing.
+
+### What the seed adds
+
+| Resource | Count | Details |
+|----------|-------|---------|
+| Users | 7 | admin, marta, carlos, lucia, pablo, sara, miguel |
+| Upcoming rides | 11 | Various Spanish routes, departures 2–14 days from now |
+| Completed rides | 2 | Madrid→Ávila, Zaragoza→Pamplona (unlocks review flow) |
+| Bookings | 9 | Mix of confirmed and pending |
+| Reviews | 4 | 4–5 star ratings on completed rides |
+
+All demo accounts share the same password: **`password123`**
+
+### Run the seed
+
+```bash
+make seed
+```
+
+Manual alternative (macOS/Linux):
+
+```bash
+docker compose exec -T postgres psql -U UniRideAdmin -d UniRide \
+    -f /docker-entrypoint-initdb.d/seeds.sql
+```
+
+Manual alternative (Windows PowerShell):
+
+```powershell
+docker compose exec -T postgres psql -U UniRideAdmin -d UniRide `
+    -f /docker-entrypoint-initdb.d/seeds.sql
+```
+
+> **Note:** `docker compose up -d` must be running before applying the seed. The script is idempotent — re-running it is safe and will not create duplicates.
+
+### Quick-reset a fresh database
+
+```bash
+docker compose down -v   # wipe volume
+docker compose up -d     # recreates schema + base data via init.sql
+make seed                # load full demo dataset
+```
+
 ## Build Commands
 
 From repository root (macOS/Linux):

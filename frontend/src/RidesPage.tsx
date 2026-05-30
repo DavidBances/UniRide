@@ -236,20 +236,31 @@ export default function RidesPage() {
       {!error && hasActiveFilters && <p className="message mb-4 text-gray-600">Resultados filtrados</p>}
 
       {loading ? (
-        <div className="loading-panel" aria-busy="true">
-          <span className="loading-spinner" aria-hidden="true" />
-          <p className="text-gray-600">Cargando viajes...</p>
+        <div className="grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Cargando viajes">
+          <RideCardSkeleton />
+          <RideCardSkeleton />
+          <RideCardSkeleton />
+          <RideCardSkeleton />
         </div>
       ) : rides.length === 0 && !error ? (
         <div className="empty-state">
-          <h2 className="text-lg font-bold text-gray-950">No hay viajes disponibles.</h2>
-          <p className="mt-2 text-gray-600">
-            Prueba con otros filtros o vuelve más tarde para ver nuevos trayectos.
-          </p>
-          {hasActiveFilters && (
-            <button className="btn border border-gray-200 bg-white text-gray-700 mt-4" type="button" onClick={resetFilters}>
-              Limpiar filtros
-            </button>
+          {hasActiveFilters ? (
+            <>
+              <h2 className="text-lg font-bold text-gray-950">Sin resultados</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                No encontramos viajes para tu búsqueda. Prueba con otro origen, destino o fecha.
+              </p>
+              <button className="btn border border-gray-200 bg-white text-gray-700 mt-4" type="button" onClick={resetFilters}>
+                Limpiar filtros
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-bold text-gray-950">No hay viajes disponibles</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Aún no hay ningún viaje publicado. Vuelve más tarde o publica el primero tú mismo.
+              </p>
+            </>
           )}
         </div>
       ) : (
@@ -384,6 +395,35 @@ export default function RidesPage() {
         </div>
       )}
     </section>
+  );
+}
+
+function RideCardSkeleton() {
+  return (
+    <article className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm" aria-hidden="true">
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="skeleton h-5 w-3/4" />
+          <div className="skeleton mt-2 h-4 w-1/2" />
+        </div>
+        <div className="skeleton h-6 w-16 rounded-md" />
+      </div>
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div>
+          <div className="skeleton h-3 w-10" />
+          <div className="skeleton mt-1 h-5 w-14" />
+        </div>
+        <div>
+          <div className="skeleton h-3 w-10" />
+          <div className="skeleton mt-1 h-5 w-20" />
+        </div>
+        <div>
+          <div className="skeleton h-3 w-12" />
+          <div className="skeleton mt-1 h-5 w-24" />
+        </div>
+      </div>
+      <div className="skeleton h-10 w-full" />
+    </article>
   );
 }
 
