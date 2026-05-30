@@ -3,18 +3,18 @@ package bookings
 
 import (
 	"context"
-<<<<<<< Updated upstream
-=======
 	"errors"
 	"fmt"
->>>>>>> Stashed changes
 	"log/slog"
 	"net/http"
+	"net/smtp"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/domain"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/shared/httpx"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/users"
@@ -200,9 +200,6 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-<<<<<<< Updated upstream
-	c.JSON(http.StatusCreated, gin.H{
-=======
 	h.logger.Info("booking created", "booking_id", booking.ID, "user_id", userID, "ride_id", booking.RideID, "seats", booking.SeatsReserved, "request_id", c.GetString("requestID"))
 
 	// Extraer email del JWT y enviar notificación de forma asíncrona
@@ -226,7 +223,6 @@ func (h *Handler) Create(c *gin.Context) {
 	}(authHeader, ride.Origin, ride.Destination, req.SeatsReserved, ride.PricePerSeat)
 
 	httpx.Success(c, http.StatusCreated, gin.H{
->>>>>>> Stashed changes
 		"message": "booking created successfully",
 		"booking": gin.H{
 			"id":            booking.ID,
@@ -321,8 +317,6 @@ func mapBookingsResponse(bookings []*domain.Booking) []gin.H {
 
 	return response
 }
-<<<<<<< Updated upstream
-=======
 
 func mapRideBookingsResponse(bookings []*domain.Booking) []gin.H {
 	response := make([]gin.H, 0, len(bookings))
@@ -376,4 +370,3 @@ func sendEmailSafe(to, subject, body string, logger *slog.Logger) {
 		logger.Info("email notification sent successfully", "to", to, "subject", subject)
 	}
 }
->>>>>>> Stashed changes
