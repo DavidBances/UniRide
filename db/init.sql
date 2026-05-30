@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS ride (
     available_seats INTEGER NOT NULL CHECK (available_seats > 0),
     price_per_seat NUMERIC(10, 2) NOT NULL CHECK (price_per_seat >= 0),
     status TEXT NOT NULL DEFAULT 'open',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_ride_status_departure_date ON ride(status, departure_date);
