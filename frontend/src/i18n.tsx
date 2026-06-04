@@ -431,8 +431,6 @@ const translations = {
   },
 } as const;
 
-type TranslationTree = typeof translations.es;
-
 type TranslationKey = string;
 
 type LanguageContextValue = {

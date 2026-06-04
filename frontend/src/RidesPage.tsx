@@ -88,7 +88,7 @@ export default function RidesPage() {
     void loadRides();
 
     return () => controller.abort();
-  }, [queryString]);
+  }, [queryString, t]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
