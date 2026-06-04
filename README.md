@@ -30,7 +30,7 @@ Install the following before starting:
 3. Docker Desktop (with Docker Compose)
 4. GNU Make (recommended for one-command workflows)
 
-If you do not have `make` on Windows, use the manual commands in the sections below.
+If you do not have `make` on Windows, install it via [Chocolatey](https://chocolatey.org/) (`choco install make`) or use the equivalent manual commands shown in each section below.
 
 ## Installation
 
@@ -62,12 +62,79 @@ Optional (for hot reload and lint tooling used by Makefile):
 go install github.com/air-verse/air@latest
 ```
 
+## Quick Start Scripts
+
+The repository includes convenience scripts that reset the database, start the backend, and serve the frontend in one step.
+
+### Windows
+
+```bat
+probar.bat
+```
+
+Run from the repository root. Opens the backend in a separate terminal window and starts the frontend in the current one.
+
+### macOS / Linux
+
+```bash
+bash probar.sh
+```
+
+Run from the repository root. Starts the backend in the background and the frontend in the foreground.
+
+> **Note:** Both scripts run `docker compose down -v` first, which wipes all existing data. Use them only for a clean demo reset. Make sure to create `.env` files (see [Environment Variables](#environment-variables-env)) before running.
+
+---
+
 ## Environment Variables (.env)
 
-Copy the example files before running locally:
+Copy the example files and fill in the values before running locally:
 
-- Root `.env.example` for backend and PostgreSQL values
-- `frontend/.env.example` for the frontend API URL
+```bash
+cp .env.example .env
+cp frontend/.env.example frontend/.env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item frontend\.env.example frontend\.env
+```
+
+**Minimal local `.env` (edit these values):**
+
+```env
+PORT=8080
+GIN_MODE=debug
+CORS_ALLOW_ORIGIN=http://localhost:5173
+JWT_SECRET=any-random-string-here
+RUN_DB_MIGRATIONS=true
+DB_SCHEMA_PATH=db/init.sql
+
+POSTGRES_USER=UniRideAdmin
+POSTGRES_PASSWORD=your-password
+POSTGRES_DB=UniRide
+POSTGRES_PORT=5432
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=UniRideAdmin
+DB_PASSWORD=your-password
+DB_NAME=UniRide
+DB_SSLMODE=disable
+```
+
+**Minimal `frontend/.env`:**
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+> **Windows note:** Use `[System.IO.File]::WriteAllText` instead of `Out-File` when creating `.env` files in PowerShell 5.1, as `Out-File` adds a BOM that Vite cannot read. Example:
+> ```powershell
+> [System.IO.File]::WriteAllText("$PWD\frontend\.env", "VITE_API_BASE_URL=http://localhost:8080`n")
+> ```
 
 Required backend variables:
 
@@ -180,15 +247,34 @@ The database ships with minimal base data from `db/init.sql` (applied automatica
 
 ### What the seed adds
 
+The seed data represents realistic university ride-sharing scenarios centred on the **University of León's Campus de Vegazana**.
+
 | Resource | Count | Details |
 |----------|-------|---------|
-| Users | 7 | admin, marta, carlos, lucia, pablo, sara, miguel |
-| Upcoming rides | 11 | Various Spanish routes, departures 2–14 days from now |
-| Completed rides | 2 | Madrid→Ávila, Zaragoza→Pamplona (unlocks review flow) |
-| Bookings | 9 | Mix of confirmed and pending |
-| Reviews | 4 | 4–5 star ratings on completed rides |
+| Users | 10 | admin, marta, carlos, lucia, pablo, sara, miguel, elena, jorge, ana |
+| Daily commutes to campus | 11 | Morning routes (07:45–09:00) from city centre, neighbourhoods and the train station |
+| Returns from campus | 3 | Midday and evening routes back to León and nearby areas |
+| Nearby town routes | 4 | Astorga, La Bañeza, Mansilla de las Mulas, Valencia de Don Juan → Campus |
+| Weekend trips | 5 | León ↔ Madrid, León ↔ Valladolid, León ↔ Oviedo |
+| Completed rides | 2 | Unlock the full booking + review flow |
+| Bookings | 31 | Mix of confirmed, pending, and cancelled |
+| Reviews | 7 | Ratings from 3 to 5 stars with realistic Spanish comments |
 
 All demo accounts share the same password: **`password123`**
+
+Exception: **`admin@uni.es`** uses **`admin123`** (set by the backend at startup).
+
+**Scenarios available after seeding:**
+
+| Scenario | Ride example |
+|---|---|
+| Fully open — no bookings yet | Puente Castro → Campus (ride 8), La Lastra → Campus (ride 10) |
+| Partially booked | Centro de León → Campus (ride 1, 2/3 taken) |
+| Pending booking | San Andrés → Campus (ride 2, 1 confirmed + 1 pending) |
+| Cancelled booking | Armunia → Campus (ride 9, 1 confirmed + 1 cancelled) |
+| Last seat (1/1 taken) | Residencia San Isidoro → Campus (ride 11) |
+| Fully booked (confirmed) | León → Madrid (ride 19, 3/3) · León → Valladolid (ride 20, 2/2) |
+| Completed with reviews | Astorga → Campus (ride 22) · León → Oviedo (ride 23) |
 
 ### Run the seed
 
