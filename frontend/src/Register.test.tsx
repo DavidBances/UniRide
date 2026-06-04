@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { apiUrl } from "./api";
 import Register from "./Register";
 
 describe("Register page", () => {
@@ -32,18 +33,18 @@ describe("Register page", () => {
   it("posts valid register data to the backend", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
-      json: async () => ({ message: "user registered successfully" }),
+      json: async () => ({ message: "Usuario registrado correctamente." }),
     } as Response);
 
     renderRegister();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Ada" } });
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ADA@UNI.ES" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ada" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "ADA@UNI.ES" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Registrarse" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "/auth/register",
+        apiUrl("/auth/register"),
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({
@@ -64,11 +65,11 @@ describe("Register page", () => {
     } as Response);
 
     renderRegister();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Ada" } });
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ada@uni.es" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ada" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "ada@uni.es" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Registrarse" }));
 
-    expect(await screen.findByText("Ese email ya está registrado.")).toBeTruthy();
+    expect(await screen.findByText("Ese correo ya está registrado.")).toBeTruthy();
   });
 });

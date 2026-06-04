@@ -33,8 +33,8 @@ describe("Login form validation", () => {
     renderLogin();
     fireEvent.click(screen.getByRole("button", { name: "Crear una" }));
 
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "student@uni.es" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "student@uni.es" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Registrarse" }));
 
     expect(screen.getByText("Completa usuario, correo y contraseña.")).toBeTruthy();
@@ -42,8 +42,8 @@ describe("Login form validation", () => {
 
   it("shows invalid email error", () => {
     renderLogin();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "invalid-email" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "invalid-email" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
 
     const form = document.querySelector("form");
     if (!form) {
@@ -57,8 +57,8 @@ describe("Login form validation", () => {
 
   it("shows password length error", () => {
     renderLogin();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "student@uni.es" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "short" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "student@uni.es" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "short" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     expect(screen.getByText("La contraseña debe tener al menos 8 caracteres.")).toBeTruthy();
@@ -68,8 +68,8 @@ describe("Login form validation", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {}) as Promise<Response>));
 
     renderLogin();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "student@uni.es" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "student@uni.es" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     await waitFor(() => {
@@ -85,8 +85,8 @@ describe("Login form validation", () => {
     } as Response);
 
     renderLogin();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "student@uni.es" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Correo"), { target: { value: "student@uni.es" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     expect(await screen.findByText("invalid credentials")).toBeTruthy();

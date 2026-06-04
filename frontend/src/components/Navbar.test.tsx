@@ -24,8 +24,9 @@ describe("Navbar", () => {
     );
 
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Login" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Register" })).toBeNull();
+    expect(screen.getByRole("button", { name: "EN" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Iniciar sesión" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Registrarse" })).toBeNull();
   });
 
   it("clears the token and shows login again on logout", () => {
@@ -40,7 +41,7 @@ describe("Navbar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
 
     expect(window.localStorage.getItem(AUTH_TOKEN_KEY)).toBeNull();
-    expect(screen.getByRole("link", { name: "Login" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Register" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Registrarse" })).toBeTruthy();
   });
 });

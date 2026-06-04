@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "./api";
 import { getStoredToken } from "./authToken";
 
@@ -37,6 +37,7 @@ type BookingsResponse = {
 };
 
 export default function RideDetailsPage({ rideId }: { rideId: string }) {
+  const navigate = useNavigate();
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [booking, setBooking] = useState<RideBooking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,7 +138,7 @@ export default function RideDetailsPage({ rideId }: { rideId: string }) {
 
   const handleReserve = async () => {
     if (!ride || !token) {
-      setActionError("Debes iniciar sesión para reservar.");
+      navigate("/login");
       return;
     }
 

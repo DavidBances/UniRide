@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiUrl } from "./api";
 import { clearStoredToken, getStoredToken, storeToken } from "./authToken";
+import { useT } from "./i18n";
 import "./Login.css";
 
 type LoginResponse = {
@@ -11,6 +12,7 @@ type LoginResponse = {
 };
 
 export default function Login() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
   const registerMessage =
@@ -49,7 +51,7 @@ export default function Login() {
         });
 
         if (!response.ok) {
-          throw new Error("invalid session");
+          throw new Error(t("auth.invalidSession"));
         }
 
         await response.json();
@@ -70,7 +72,7 @@ export default function Login() {
     void hydrateSession();
 
     return () => controller.abort();
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -78,22 +80,22 @@ export default function Login() {
     setOk("");
 
     if (!email || !password) {
-      setError("Completa correo y contraseña.");
+      setError(t("auth.requiredLogin"));
       return;
     }
 
     if (mode === "register" && !username.trim()) {
-      setError("Completa usuario, correo y contraseña.");
+      setError(t("auth.requiredRegister"));
       return;
     }
 
     if (!email.includes("@")) {
-      setError("Correo no válido.");
+      setError(t("auth.invalidEmail"));
       return;
     }
 
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
+      setError(t("auth.passwordLength"));
       return;
     }
 
@@ -115,13 +117,13 @@ export default function Login() {
       const data = (await response.json()) as LoginResponse;
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo completar la solicitud.");
+        setError(data.error ?? t("auth.requestError"));
         return;
       }
 
       if (mode === "login") {
         if (!data.token) {
-          setError("La respuesta de login no incluye sesión válida.");
+          setError(t("auth.invalidSession"));
           return;
         }
 
@@ -129,7 +131,7 @@ export default function Login() {
         navigate("/profile");
         return;
       } else {
-        setOk(data.message ?? "Usuario registrado correctamente.");
+        setOk(data.message ?? t("auth.registerSuccess"));
         setMode("login");
       }
 
@@ -137,7 +139,7 @@ export default function Login() {
       setEmail("");
       setPassword("");
     } catch {
-      setError("No se pudo conectar con el servidor.");
+      setError(t("auth.serverError"));
     } finally {
       setLoading(false);
     }
@@ -154,10 +156,10 @@ export default function Login() {
     return (
       <section className="auth-page" aria-busy="true">
         <section className="card auth-card auth-session-card">
-          <p className="session-kicker">Verificando sesión</p>
-          <h1 className="text-title">Restaurando acceso seguro</h1>
+          <p className="session-kicker">{t("auth.verifyingSession")}</p>
+          <h1 className="text-title">{t("auth.restoringAccess")}</h1>
           <span className="loading-spinner" aria-hidden="true" />
-          <p className="session-copy">Comprobando si existe un token válido antes de mostrar el formulario.</p>
+          <p className="session-copy">{t("auth.sessionMessage")}</p>
         </section>
       </section>
     );
@@ -166,12 +168,12 @@ export default function Login() {
   return (
     <section className="auth-page">
       <form className="card auth-card auth-form" onSubmit={handleSubmit}>
-        <h1 className="text-title">{mode === "login" ? "Iniciar sesión" : "Crear cuenta"}</h1>
+        <h1 className="text-title">{mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle")}</h1>
 
         {mode === "register" && (
           <div className="field">
             <label className="text-label" htmlFor="username">
-              Nombre de usuario
+              {t("auth.username")}
             </label>
             <input
               className="input"
@@ -187,7 +189,7 @@ export default function Login() {
 
         <div className="field">
           <label className="text-label" htmlFor="email">
-            Email
+            {t("auth.email")}
           </label>
           <input
             className="input"
@@ -202,7 +204,7 @@ export default function Login() {
 
         <div className="field">
           <label className="text-label" htmlFor="password">
-            Password
+            {t("auth.password")}
           </label>
           <input
             className="input"
@@ -222,17 +224,17 @@ export default function Login() {
           {loading && <span className="button-spinner" aria-hidden="true" />}
           {loading
             ? mode === "login"
-              ? "Entrando..."
-              : "Registrando..."
+              ? t("auth.signingIn")
+              : t("auth.signingUp")
             : mode === "login"
-              ? "Entrar"
-              : "Registrarse"}
+              ? t("auth.submitLogin")
+              : t("auth.submitRegister")}
         </button>
 
         <p className="switch-auth">
-          {mode === "login" ? "No tienes una cuenta?" : "Ya tienes una cuenta?"}
+          {mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
           <button type="button" className="btn btn-ghost switch-auth-btn" onClick={switchMode}>
-            {mode === "login" ? "Crear una" : "Iniciar sesión"}
+            {mode === "login" ? t("auth.createOne") : t("auth.signIn")}
           </button>
         </p>
       </form>

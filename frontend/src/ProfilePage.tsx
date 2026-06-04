@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiUrl } from "./api";
 import { getStoredToken } from "./authToken";
+import { useT } from "./i18n";
 
 type BookingRideSummary = {
   id: number;
@@ -47,13 +48,27 @@ type RideReservation = {
   };
 };
 
+type AuthUser = {
+  id: number;
+  username: string;
+  email: string;
+};
+
+type MeResponse = {
+  user: AuthUser;
+};
+
 export default function ProfilePage() {
+  const t = useT();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rides, setRides] = useState<UserRide[]>([]);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [loadingRides, setLoadingRides] = useState(true);
+  const [loadingUser, setLoadingUser] = useState(true);
   const [errorBookings, setErrorBookings] = useState("");
   const [errorRides, setErrorRides] = useState("");
+  const [errorUser, setErrorUser] = useState("");
   const [selectedRide, setSelectedRide] = useState<UserRide | null>(null);
   const [rideReservations, setRideReservations] = useState<RideReservation[]>([]);
   const [loadingRideReservations, setLoadingRideReservations] = useState(false);
@@ -64,6 +79,30 @@ export default function ProfilePage() {
   useEffect(() => {
     const controller = new AbortController();
 
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/private/me"), {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const data = (await response.json()) as MeResponse;
+
+        if (!response.ok) {
+          throw new Error((data as { error?: string }).error || t("profile.refreshError"));
+        }
+
+        setAuthUser(data.user);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name !== "AbortError") setErrorUser(err.message);
+        } else {
+          setErrorUser(t("profile.refreshError"));
+        }
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
     const fetchBookings = async () => {
       try {
         const response = await fetch(apiUrl("/api/me/bookings"), {
@@ -71,13 +110,13 @@ export default function ProfilePage() {
           signal: controller.signal,
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Error al cargar reservas");
+        if (!response.ok) throw new Error(data.error || t("profile.refreshError"));
         setBookings(data.bookings || []);
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.name !== "AbortError") setErrorBookings(err.message);
         } else {
-          setErrorBookings("Ocurrió un error inesperado");
+          setErrorBookings(t("profile.refreshError"));
         }
       } finally {
         setLoadingBookings(false);
@@ -91,13 +130,13 @@ export default function ProfilePage() {
           signal: controller.signal,
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Error al cargar viajes");
+        if (!response.ok) throw new Error(data.error || t("profile.refreshError"));
         setRides(data.rides || []);
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.name !== "AbortError") setErrorRides(err.message);
         } else {
-          setErrorRides("Ocurrió un error inesperado");
+          setErrorRides(t("profile.refreshError"));
         }
       } finally {
         setLoadingRides(false);
@@ -105,15 +144,17 @@ export default function ProfilePage() {
     };
 
     if (token) {
+      void fetchUser();
       void fetchBookings();
       void fetchRides();
     } else {
+      setLoadingUser(false);
       setLoadingBookings(false);
       setLoadingRides(false);
     }
 
     return () => controller.abort();
-  }, [token]);
+  }, [t, token]);
 
   const handleCancelBooking = async (bookingId: number) => {
     if (!window.confirm("¿Estás seguro de que quieres cancelar esta reserva?")) return;
@@ -126,13 +167,13 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || "No se pudo cancelar la reserva.");
+        alert(data.error || t("rides.cancelError"));
         return;
       }
 
       setBookings((prev) => prev.filter((b) => b.id !== bookingId));
     } catch {
-      alert("Error de conexión al servidor.");
+      alert(t("rides.connectionError"));
     }
   };
 
@@ -179,16 +220,50 @@ export default function ProfilePage() {
 
   return (
     <section className="w-full max-w-6xl mx-auto py-6 px-4">
-      <h1 className="text-3xl font-bold text-gray-950 mb-8">Mi Perfil</h1>
+      <h1 className="text-3xl font-bold text-gray-950 mb-8">{t("profile.title")}</h1>
+
+      <div className="mb-8 overflow-hidden rounded-2xl border border-teal-100 bg-white shadow-sm">
+        <div className="bg-gradient-to-r from-teal-600 via-cyan-600 to-emerald-600 px-6 py-5 text-white">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-50">{t("profile.sessionActive")}</p>
+          <h2 className="mt-2 text-2xl font-bold">{t("profile.identityTitle")}</h2>
+          <p className="mt-2 max-w-2xl text-sm text-teal-50/90">
+            {t("profile.identityCopy")}
+          </p>
+        </div>
+
+        <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+          {loadingUser ? (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:col-span-2" aria-busy="true">
+              <span className="loading-spinner" aria-hidden="true" />
+              <p className="mt-2 text-gray-600">{t("profile.loadingUser")}</p>
+            </div>
+          ) : errorUser ? (
+            <div className="rounded-xl border border-red-100 bg-red-50 p-4 sm:col-span-2">
+              <p className="text-red-700">{errorUser}</p>
+            </div>
+          ) : authUser ? (
+            <>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">{t("profile.name")}</p>
+                <p className="mt-2 text-lg font-bold text-gray-950">{authUser.username}</p>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">{t("profile.email")}</p>
+                <p className="mt-2 text-lg font-bold text-gray-950">{authUser.email}</p>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Mis Reservas</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">{t("profile.bookingsTitle")}</h2>
 
           {loadingBookings ? (
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" aria-busy="true">
               <span className="loading-spinner" aria-hidden="true" />
-              <p className="mt-2 text-gray-600">Cargando reservas...</p>
+              <p className="mt-2 text-gray-600">{t("profile.loadingBookings")}</p>
             </div>
           ) : errorBookings ? (
             <div className="rounded-lg border border-red-100 bg-red-50 p-4">
@@ -196,9 +271,9 @@ export default function ProfilePage() {
             </div>
           ) : bookings.length === 0 ? (
             <div className="empty-state">
-              <h3 className="text-lg font-bold text-gray-950">Aún no tienes reservas</h3>
-              <p className="mt-2 text-gray-600 text-sm">Explora los viajes disponibles y reserva tu próximo trayecto.</p>
-              <Link className="btn btn-primary mt-4 text-sm" to="/rides">Buscar viajes</Link>
+              <h3 className="text-lg font-bold text-gray-950">{t("profile.bookingsEmpty")}</h3>
+              <p className="mt-2 text-gray-600 text-sm">{t("profile.bookingsEmptyCopy")}</p>
+              <Link className="btn btn-primary mt-4 text-sm" to="/rides">{t("profile.goBrowseRides")}</Link>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -233,10 +308,10 @@ export default function ProfilePage() {
 
                   <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
                     <Link to={`/rides/${booking.ride.id}`} className="btn border border-gray-200 bg-white text-gray-700 flex-1 text-center text-sm py-2">
-                      Ver viaje
+                      {t("profile.viewRide")}
                     </Link>
                     <button onClick={() => handleCancelBooking(booking.id)} className="btn bg-red-50 text-red-600 hover:bg-red-100 flex-1 text-sm py-2">
-                      Cancelar
+                      {t("rides.cancel")}
                     </button>
                   </div>
                 </article>
@@ -247,14 +322,14 @@ export default function ProfilePage() {
 
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Mis Viajes Publicados</h2>
-            <Link to="/create-ride" className="btn btn-primary text-sm py-1.5 px-3">+ Nuevo</Link>
+            <h2 className="text-2xl font-semibold text-gray-900">{t("profile.publishedTitle")}</h2>
+            <Link to="/create-ride" className="btn btn-primary text-sm py-1.5 px-3">+ {t("profile.publishRide")}</Link>
           </div>
 
           {loadingRides ? (
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm" aria-busy="true">
               <span className="loading-spinner" aria-hidden="true" />
-              <p className="mt-2 text-gray-600">Cargando viajes...</p>
+              <p className="mt-2 text-gray-600">{t("profile.loadingRides")}</p>
             </div>
           ) : errorRides ? (
             <div className="rounded-lg border border-red-100 bg-red-50 p-4">
@@ -262,9 +337,9 @@ export default function ProfilePage() {
             </div>
           ) : rides.length === 0 ? (
             <div className="empty-state">
-              <h3 className="text-lg font-bold text-gray-950">No has publicado viajes</h3>
-              <p className="mt-2 text-gray-600 text-sm">Empieza a compartir coche y ahorra gastos.</p>
-              <Link className="btn btn-primary mt-4 text-sm" to="/create-ride">Publicar viaje</Link>
+              <h3 className="text-lg font-bold text-gray-950">{t("profile.publishedEmpty")}</h3>
+              <p className="mt-2 text-gray-600 text-sm">{t("profile.publishedEmptyCopy")}</p>
+              <Link className="btn btn-primary mt-4 text-sm" to="/create-ride">{t("profile.publishRide")}</Link>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -272,7 +347,7 @@ export default function ProfilePage() {
                 <article key={ride.id} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Viaje publicado</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-teal-700">{t("profile.publishedTitle")}</p>
                       <h3 className="mt-1 text-lg font-bold text-gray-900">
                         {ride.origin} &rarr; {ride.destination}
                       </h3>
@@ -289,39 +364,39 @@ export default function ProfilePage() {
 
                   <div className="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                      <p className="text-xs font-medium text-gray-500">Ruta</p>
+                      <p className="text-xs font-medium text-gray-500">{t("profile.route")}</p>
                       <p className="mt-1 font-bold text-gray-900">{ride.origin} &rarr; {ride.destination}</p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                      <p className="text-xs font-medium text-gray-500">Fecha</p>
+                      <p className="text-xs font-medium text-gray-500">{t("profile.date")}</p>
                       <p className="mt-1 font-bold text-gray-900">{formatRideDate(ride.departureDate)}</p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                      <p className="text-xs font-medium text-gray-500">Asientos libres</p>
+                      <p className="text-xs font-medium text-gray-500">{t("profile.seatsFree")}</p>
                       <p className="mt-1 font-bold text-gray-900">{ride.availableSeats}</p>
                     </div>
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                      <p className="text-xs font-medium text-gray-500">Reservas</p>
+                      <p className="text-xs font-medium text-gray-500">{t("profile.bookingsCount")}</p>
                       <p className="mt-1 font-bold text-gray-900">{ride.bookingsCount}</p>
                     </div>
                   </div>
 
                   <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
-                    <p className="font-semibold text-gray-700">Acciones de gestión</p>
-                    <p className="mt-1 text-gray-600">Revisa quién se ha apuntado a este viaje.</p>
+                    <p className="font-semibold text-gray-700">{t("profile.viewBookings")}</p>
+                    <p className="mt-1 text-gray-600">{t("profile.loadingReservations")}</p>
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <button type="button" className="btn border border-gray-200 bg-white text-gray-700" onClick={() => void openRideReservations(ride)}>
-                        Ver reservas
+                        {t("profile.viewBookings")}
                       </button>
                       <button type="button" className="btn bg-red-50 text-red-700 hover:bg-red-100" disabled>
-                        Cancelar publicación
+                        {t("profile.cancelPublication")}
                       </button>
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <Link to={`/rides/${ride.id}`} className="btn border border-gray-200 bg-white text-gray-700 w-full text-center text-sm py-2 block">
-                      Ver detalles
+                      {t("rides.viewDetails")}
                     </Link>
                   </div>
                 </article>
@@ -336,13 +411,13 @@ export default function ProfilePage() {
           <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Reservas del viaje</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-teal-700">{t("profile.reservationModalTitle")}</p>
                 <h3 id="ride-bookings-title" className="mt-1 text-2xl font-bold text-gray-950">
                   {selectedRide.origin} &rarr; {selectedRide.destination}
                 </h3>
               </div>
-              <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-800" onClick={closeRideModal}>
-                Cerrar
+                <button type="button" className="text-sm font-semibold text-gray-500 hover:text-gray-800" onClick={closeRideModal}>
+                {t("profile.close")}
               </button>
             </div>
 
@@ -351,12 +426,12 @@ export default function ProfilePage() {
             {loadingRideReservations ? (
               <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-6" aria-busy="true">
                 <span className="loading-spinner" aria-hidden="true" />
-                <p className="mt-2 text-gray-600">Cargando reservas...</p>
+                <p className="mt-2 text-gray-600">{t("profile.loadingReservations")}</p>
               </div>
             ) : rideReservations.length === 0 ? (
               <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-6">
-                <p className="text-gray-700 font-semibold">Todavía no hay reservas para este viaje.</p>
-                <p className="mt-1 text-sm text-gray-600">Cuando alguien reserve, aparecerá aquí su nombre, email y número de plazas.</p>
+                <p className="text-gray-700 font-semibold">{t("profile.noReservations")}</p>
+                <p className="mt-1 text-sm text-gray-600">{t("profile.identityCopy")}</p>
               </div>
             ) : (
               <div className="mt-5 grid gap-3">
@@ -366,8 +441,8 @@ export default function ProfilePage() {
                       <div>
                         <p className="font-bold text-gray-950">{reservation.passenger.username}</p>
                         <p className="text-sm text-gray-600">{reservation.passenger.email}</p>
-                        <p className="mt-2 text-sm text-gray-700">Asientos: {reservation.seatsReserved}</p>
-                        <p className="text-sm text-gray-700">Estado: {reservation.status.toUpperCase()}</p>
+                        <p className="mt-2 text-sm text-gray-700">{t("profile.seats")}: {reservation.seatsReserved}</p>
+                        <p className="text-sm text-gray-700">{t("profile.status")}: {reservation.status.toUpperCase()}</p>
                       </div>
                       <span className="rounded-md bg-white px-2 py-1 text-xs font-bold text-gray-700">
                         {new Date(reservation.createdAt).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}

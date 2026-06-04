@@ -1,0 +1,518 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+export type Language = "es" | "en";
+
+const LANGUAGE_STORAGE_KEY = "uniride-language";
+
+const translations = {
+  es: {
+    appName: "UniRide",
+    nav: {
+      findRide: "Buscar viaje",
+      publishRide: "Publicar viaje",
+      profile: "Perfil",
+      register: "Registrarse",
+      login: "Iniciar sesión",
+      logout: "Cerrar sesión",
+      language: "EN",
+      openMenu: "Abrir menú de navegación",
+      closeMenu: "Cerrar menú de navegación",
+    },
+    footer: "Todos los derechos reservados.",
+    home: {
+      kicker: "Movilidad campus",
+      title: "Comparte trayectos con tu comunidad universitaria.",
+      subtitle: "Encuentra viajes disponibles, reserva asientos o publica tus propios trayectos desde un mismo panel.",
+      findRides: "Buscar viajes",
+      createAccount: "Crear cuenta",
+      cardKicker: "Empieza en minutos",
+      cardTitle: "Únete a UniRide y muévete con menos esfuerzo.",
+      cardDescription: "Crea tu cuenta para reservar más rápido, publicar viajes y tenerlo todo organizado en un solo lugar.",
+      book: "Reserva en segundos",
+      bookCopy: "Filtra por ruta, precio y plazas sin pasos extra.",
+      publish: "Publica tus trayectos",
+      publishCopy: "Comparte tu ruta con compañeros y gestiona reservas.",
+      organize: "Mantén todo ordenado",
+      organizeCopy: "Controla reservas y viajes publicados desde tu perfil.",
+      browseRides: "Ver viajes",
+    },
+    shared: {
+      comingSoon: "Próximamente",
+      goToProfile: "Ir al perfil",
+      browseRides: "Buscar viajes",
+      pageNotFound: "Página no encontrada",
+      pageNotFoundCopy: "La página que buscas no existe.",
+      goBackHome: "Volver al inicio",
+      redirecting: "Redirigiendo",
+      redirectingCopy: "Inicia sesión para acceder a esta página.",
+      loginRequired: "Inicia sesión para acceder a esta página.",
+    },
+    auth: {
+      verifyingSession: "Verificando sesión",
+      restoringAccess: "Restaurando acceso seguro",
+      checkingToken: "Comprobando si existe un token válido antes de mostrar el formulario.",
+      loginTitle: "Iniciar sesión",
+      registerTitle: "Crear cuenta",
+      username: "Nombre de usuario",
+      email: "Correo",
+      password: "Contraseña",
+      noAccount: "No tienes una cuenta?",
+      haveAccount: "Ya tienes una cuenta?",
+      createOne: "Crear una",
+      signIn: "Iniciar sesión",
+      signUp: "Registrarse",
+      signingIn: "Entrando...",
+      signingUp: "Registrando...",
+      submitLogin: "Entrar",
+      submitRegister: "Registrarse",
+      requiredLogin: "Completa correo y contraseña.",
+      requiredRegister: "Completa usuario, correo y contraseña.",
+      invalidEmail: "Correo no válido.",
+      passwordLength: "La contraseña debe tener al menos 8 caracteres.",
+      requestError: "No se pudo completar la solicitud.",
+      invalidSession: "La sesión no es válida.",
+      registerSuccess: "Usuario registrado correctamente.",
+      serverError: "No se pudo conectar con el servidor.",
+      sessionMessage: "Comprobando si existe un token válido antes de mostrar el formulario.",
+    },
+    registerPage: {
+      title: "Crear cuenta",
+      name: "Nombre",
+      email: "Correo",
+      password: "Contraseña",
+      submit: "Registrarse",
+      loading: "Registrando...",
+      required: "Completa nombre, correo y contraseña.",
+      invalidEmail: "Correo no válido.",
+      shortPassword: "La contraseña debe tener al menos 8 caracteres.",
+      duplicateEmail: "Ese correo ya está registrado.",
+      serverError: "El servidor no pudo crear la cuenta. Inténtalo de nuevo.",
+      genericError: "No se pudo completar el registro.",
+      success: "Usuario registrado correctamente.",
+    },
+    rides: {
+      title: "Viajes",
+      description: "Busca viajes publicados por origen, destino, fecha y plazas.",
+      routeJoiner: "a",
+      origin: "Origen",
+      destination: "Destino",
+      date: "Fecha",
+      seats: "Plazas",
+      search: "Buscar",
+      searching: "Buscando...",
+      clearFilters: "Limpiar filtros",
+      filtered: "Resultados filtrados",
+      loading: "Cargando viajes",
+      noResults: "Sin resultados",
+      noResultsCopy: "No encontramos viajes para tu búsqueda. Prueba con otro origen, destino o fecha.",
+      noResultsReset: "Limpiar filtros",
+      noRides: "No hay viajes disponibles",
+      noRidesCopy: "Aún no hay ningún viaje publicado. Vuelve más tarde o publica el primero tú mismo.",
+      rideStatus: {
+        open: "Abierto",
+        full: "Completo",
+        closed: "Cerrado",
+      },
+      seatsLabel: "Plazas",
+      price: "Precio",
+      rating: "Valoración",
+      viewDetails: "Ver detalles",
+      reserve: "Reservar",
+      completed: "Viaje completado",
+      noSeatsLeft: "Sin plazas",
+      loginRequired: "Inicia sesión para reservar.",
+      reserveTitle: "Reservar viaje",
+      selectedSeats: "Número de plazas",
+      cancel: "Cancelar",
+      confirm: "Confirmar reserva",
+      reserving: "Reservando...",
+      reservationCreated: "Reserva confirmada correctamente.",
+      reservationError: "No se pudo hacer la reserva.",
+      connectionError: "Error de conexión al servidor.",
+    },
+    createRide: {
+      title: "Publicar un nuevo viaje",
+      errorRequired: "Por favor, rellena todos los campos obligatorios.",
+      errorSeats: "El número de asientos debe ser mayor que 0.",
+      errorPrice: "El precio no puede ser negativo.",
+      loginRequired: "Debes iniciar sesión para publicar un viaje.",
+      submitError: "No se pudo publicar el viaje.",
+      success: "¡Viaje publicado con éxito!",
+      connectionError: "No se pudo conectar con el servidor.",
+      origin: "Origen *",
+      destination: "Destino *",
+      departureDate: "Fecha de salida *",
+      departureTime: "Hora de salida *",
+      availableSeats: "Asientos disponibles *",
+      price: "Precio por asiento (€) *",
+      notes: "Notas (opcional)",
+      submit: "Publicar Viaje",
+      submitting: "Publicando...",
+      originPlaceholder: "Ej: Universidad de León",
+      destinationPlaceholder: "Ej: Centro de Madrid",
+      notesPlaceholder: "Detalles extra como lugar exacto de recogida...",
+    },
+    rideDetails: {
+      back: "Volver a los viajes",
+      loading: "Cargando detalles del viaje...",
+      notFoundTitle: "Viaje no encontrado",
+      notFoundCopy: "El viaje que buscas no existe.",
+      backToRides: "Volver a viajes",
+      driver: "Conductor",
+      price: "Precio",
+      seatsLeft: "Plazas libres",
+      notes: "Notas",
+      notesCopy: "Sin notas adicionales proporcionadas por el conductor.",
+      full: "Completo",
+      bookingExists: "Ya tienes una reserva para este viaje.",
+      seatsReserved: "Asientos reservados:",
+      cancelBooking: "Cancelar reserva",
+      bookingLoading: "Comprobando reserva...",
+      reserveSeats: "Número de plazas",
+      reserve: "Reservar",
+      reserving: "Reservando...",
+      reservationCreated: "Reserva confirmada correctamente.",
+      reservationCancelled: "Reserva cancelada correctamente.",
+      loginPrompt: "Inicia sesión para reservar desde esta pantalla.",
+      goToLogin: "Ir a login",
+      loginRequired: "Debes iniciar sesión para reservar.",
+      canceling: "Cancelando...",
+      cancelError: "No se pudo cancelar la reserva.",
+      reserveError: "No se pudo hacer la reserva.",
+      connectionError: "Error de conexión al servidor.",
+    },
+    profile: {
+      title: "Mi perfil",
+      sessionActive: "Sesión activa",
+      identityTitle: "Tu identidad en UniRide",
+      identityCopy: "Revisa el nombre y el correo asociados a tu cuenta antes de gestionar reservas y viajes publicados.",
+      name: "Nombre",
+      email: "Correo",
+      authenticated: "Autenticado",
+      loadingUser: "Cargando tu perfil...",
+      bookingsEmpty: "Aún no tienes reservas",
+      bookingsEmptyCopy: "Tus reservas aparecerán aquí cuando confirmes un viaje.",
+      goBrowseRides: "Buscar viajes",
+      publishedEmpty: "No has publicado viajes",
+      publishedEmptyCopy: "Publica un viaje para que otros puedan reservar plazas contigo.",
+      publishRide: "Publicar viaje",
+      bookingsTitle: "Mis reservas",
+      publishedTitle: "Mis viajes publicados",
+      refreshError: "Ocurrió un error inesperado",
+      loadingBookings: "Cargando reservas...",
+      loadingRides: "Cargando viajes...",
+      seats: "Asientos",
+      route: "Ruta",
+      date: "Fecha",
+      seatsFree: "Asientos libres",
+      bookingsCount: "Reservas",
+      viewRide: "Ver viaje",
+      viewBookings: "Ver reservas",
+      cancelPublication: "Cancelar publicación",
+      status: "Estado",
+      reservationModalTitle: "Reservas del viaje",
+      close: "Cerrar",
+      noReservations: "Todavía no hay reservas para este viaje.",
+      loadingReservations: "Cargando reservas del viaje...",
+      passenger: "Pasajero",
+    },
+  },
+  en: {
+    appName: "UniRide",
+    nav: {
+      findRide: "Find Ride",
+      publishRide: "Publish Ride",
+      profile: "Profile",
+      register: "Register",
+      login: "Login",
+      logout: "Log out",
+      language: "ES",
+      openMenu: "Open navigation menu",
+      closeMenu: "Close navigation menu",
+    },
+    footer: "All rights reserved.",
+    home: {
+      kicker: "Campus mobility",
+      title: "Share rides with your university community.",
+      subtitle: "Find available trips, reserve seats or publish your own trips from one place.",
+      findRides: "Find rides",
+      createAccount: "Create account",
+      cardKicker: "Get started in minutes",
+      cardTitle: "Join UniRide and make campus travel easier.",
+      cardDescription: "Create your account to book rides faster, publish your own trips and keep everything in one place.",
+      book: "Book in seconds",
+      bookCopy: "Filter by route, price and seats without extra steps.",
+      publish: "Publish your trips",
+      publishCopy: "Share your route with classmates and manage reservations.",
+      organize: "Stay organized",
+      organizeCopy: "Track bookings and posted rides from your profile.",
+      browseRides: "Browse rides",
+    },
+    shared: {
+      comingSoon: "Coming soon",
+      goToProfile: "Go to profile",
+      browseRides: "Browse rides",
+      pageNotFound: "Page not found",
+      pageNotFoundCopy: "The page you are looking for does not exist.",
+      goBackHome: "Go back home",
+      redirecting: "Redirecting",
+      redirectingCopy: "Please sign in to access this page.",
+      loginRequired: "Please sign in to access this page.",
+    },
+    auth: {
+      verifyingSession: "Verifying session",
+      restoringAccess: "Restoring secure access",
+      checkingToken: "Checking whether a valid token exists before showing the form.",
+      loginTitle: "Login",
+      registerTitle: "Create account",
+      username: "Username",
+      email: "Email",
+      password: "Password",
+      noAccount: "No account yet?",
+      haveAccount: "Already have an account?",
+      createOne: "Create one",
+      signIn: "Sign in",
+      signUp: "Sign up",
+      signingIn: "Signing in...",
+      signingUp: "Signing up...",
+      submitLogin: "Enter",
+      submitRegister: "Sign up",
+      requiredLogin: "Complete email and password.",
+      requiredRegister: "Complete username, email and password.",
+      invalidEmail: "Invalid email.",
+      passwordLength: "Password must be at least 8 characters.",
+      requestError: "The request could not be completed.",
+      invalidSession: "The session is not valid.",
+      registerSuccess: "User registered successfully.",
+      serverError: "Could not connect to the server.",
+      sessionMessage: "Checking whether a valid token exists before showing the form.",
+    },
+    registerPage: {
+      title: "Create account",
+      name: "Name",
+      email: "Email",
+      password: "Password",
+      submit: "Sign up",
+      loading: "Signing up...",
+      required: "Complete name, email and password.",
+      invalidEmail: "Invalid email.",
+      shortPassword: "Password must be at least 8 characters.",
+      duplicateEmail: "That email is already registered.",
+      serverError: "The server could not create the account. Try again.",
+      genericError: "The registration could not be completed.",
+      success: "User registered successfully.",
+    },
+    rides: {
+      title: "Rides",
+      description: "Search published rides by origin, destination, date and seats.",
+      routeJoiner: "to",
+      origin: "Origin",
+      destination: "Destination",
+      date: "Date",
+      seats: "Seats",
+      search: "Search",
+      searching: "Searching...",
+      clearFilters: "Clear filters",
+      filtered: "Filtered results",
+      loading: "Loading rides",
+      noResults: "No results",
+      noResultsCopy: "We couldn't find rides for your search. Try another origin, destination or date.",
+      noResultsReset: "Clear filters",
+      noRides: "No rides available",
+      noRidesCopy: "There are no published rides yet. Come back later or publish the first one yourself.",
+      rideStatus: {
+        open: "Open",
+        full: "Full",
+        closed: "Closed",
+      },
+      seatsLabel: "Seats",
+      price: "Price",
+      rating: "Rating",
+      viewDetails: "View details",
+      reserve: "Reserve",
+      completed: "Completed ride",
+      noSeatsLeft: "No seats left",
+      loginRequired: "Please sign in to reserve.",
+      reserveTitle: "Reserve ride",
+      selectedSeats: "Number of seats",
+      cancel: "Cancel",
+      confirm: "Confirm reservation",
+      reserving: "Reserving...",
+      reservationCreated: "Reservation confirmed successfully.",
+      reservationError: "Could not make the reservation.",
+      connectionError: "Could not connect to the server.",
+    },
+    createRide: {
+      title: "Publish a new ride",
+      errorRequired: "Please fill in all required fields.",
+      errorSeats: "The number of seats must be greater than 0.",
+      errorPrice: "The price cannot be negative.",
+      loginRequired: "You must sign in to publish a ride.",
+      submitError: "Could not publish the ride.",
+      success: "Ride published successfully!",
+      connectionError: "Could not connect to the server.",
+      origin: "Origin *",
+      destination: "Destination *",
+      departureDate: "Departure date *",
+      departureTime: "Departure time *",
+      availableSeats: "Available seats *",
+      price: "Price per seat (€) *",
+      notes: "Notes (optional)",
+      submit: "Publish Ride",
+      submitting: "Publishing...",
+      originPlaceholder: "e.g. University of León",
+      destinationPlaceholder: "e.g. Madrid city center",
+      notesPlaceholder: "Extra details such as the exact pickup point...",
+    },
+    rideDetails: {
+      back: "Back to rides",
+      loading: "Loading ride details...",
+      notFoundTitle: "Ride not found",
+      notFoundCopy: "The ride you are looking for does not exist.",
+      backToRides: "Back to rides",
+      driver: "Driver",
+      price: "Price",
+      seatsLeft: "Seats left",
+      notes: "Notes",
+      notesCopy: "No additional notes provided by the driver.",
+      full: "Full",
+      bookingExists: "You already have a reservation for this ride.",
+      seatsReserved: "Seats reserved:",
+      cancelBooking: "Cancel reservation",
+      bookingLoading: "Checking reservation...",
+      reserveSeats: "Number of seats",
+      reserve: "Reserve",
+      reserving: "Reserving...",
+      reservationCreated: "Reservation confirmed successfully.",
+      reservationCancelled: "Reservation cancelled successfully.",
+      loginPrompt: "Please sign in to reserve from this screen.",
+      goToLogin: "Go to login",
+      loginRequired: "Please sign in to reserve.",
+      canceling: "Cancelling...",
+      cancelError: "Could not cancel the reservation.",
+      reserveError: "Could not make the reservation.",
+      connectionError: "Could not connect to the server.",
+    },
+    profile: {
+      title: "My profile",
+      sessionActive: "Active session",
+      identityTitle: "Your identity in UniRide",
+      identityCopy: "Review the name and email associated with your account before managing bookings and published rides.",
+      name: "Name",
+      email: "Email",
+      authenticated: "Authenticated",
+      loadingUser: "Loading your profile...",
+      bookingsEmpty: "You have no bookings yet",
+      bookingsEmptyCopy: "Your bookings will appear here once you confirm a ride.",
+      goBrowseRides: "Browse rides",
+      publishedEmpty: "You have not published any rides",
+      publishedEmptyCopy: "Publish a ride so others can reserve seats with you.",
+      publishRide: "Publish ride",
+      bookingsTitle: "My bookings",
+      publishedTitle: "My published rides",
+      refreshError: "Something went wrong",
+      loadingBookings: "Loading bookings...",
+      loadingRides: "Loading rides...",
+      seats: "Seats",
+      route: "Route",
+      date: "Date",
+      seatsFree: "Seats left",
+      bookingsCount: "Bookings",
+      viewRide: "View ride",
+      viewBookings: "View bookings",
+      cancelPublication: "Cancel publication",
+      status: "Status",
+      reservationModalTitle: "Ride bookings",
+      close: "Close",
+      noReservations: "There are no bookings for this ride yet.",
+      loadingReservations: "Loading ride bookings...",
+      passenger: "Passenger",
+    },
+  },
+} as const;
+
+type TranslationTree = typeof translations.es;
+
+type TranslationKey = string;
+
+type LanguageContextValue = {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  toggleLanguage: () => void;
+  t: (key: TranslationKey) => string;
+};
+
+const fallbackLanguage = getStoredLanguage();
+
+const LanguageContext = createContext<LanguageContextValue>({
+  language: fallbackLanguage,
+  setLanguage: () => undefined,
+  toggleLanguage: () => undefined,
+  t: (key: TranslationKey) => resolveTranslation(fallbackLanguage, key),
+});
+
+function getStoredLanguage(): Language {
+  if (typeof window === "undefined") {
+    return "es";
+  }
+
+  const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return stored === "en" ? "en" : "es";
+}
+
+function storeLanguage(language: Language) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+}
+
+function resolveTranslation(language: Language, key: TranslationKey) {
+  const parts = key.split(".");
+  let current: unknown = translations[language];
+
+  for (const part of parts) {
+    if (!current || typeof current !== "object" || !(part in current)) {
+      return key;
+    }
+
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return typeof current === "string" ? current : key;
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<Language>(getStoredLanguage());
+
+  useEffect(() => {
+    storeLanguage(language);
+    document.documentElement.lang = language;
+  }, [language]);
+
+  const value = useMemo<LanguageContextValue>(
+    () => ({
+      language,
+      setLanguage: (nextLanguage) => setLanguageState(nextLanguage),
+      toggleLanguage: () => setLanguageState((current) => (current === "es" ? "en" : "es")),
+      t: (key) => resolveTranslation(language, key),
+    }),
+    [language]
+  );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  return context;
+}
+
+export function useT() {
+  return useLanguage().t;
+}
+
+export function isEnglish(language: Language) {
+  return language === "en";
+}
