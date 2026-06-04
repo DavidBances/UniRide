@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { apiUrl } from "./api";
 import { AUTH_TOKEN_KEY } from "./authToken";
 import ProfilePage from "./ProfilePage";
 
@@ -18,6 +19,19 @@ describe("ProfilePage", () => {
   it("shows bookings and published rides with useful details", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).endsWith("/api/private/me")) {
+        return {
+          ok: true,
+          json: async () => ({
+            user: {
+              id: 7,
+              username: "Ada Lovelace",
+              email: "ada@uni.es",
+            },
+          }),
+        } as Response;
+      }
+
       if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
@@ -70,6 +84,8 @@ describe("ProfilePage", () => {
       </MemoryRouter>
     );
 
+    expect(await screen.findByText("Ada Lovelace")).toBeTruthy();
+    expect(screen.getByText("ada@uni.es")).toBeTruthy();
     expect(await screen.findByText("Leon to Madrid")).toBeTruthy();
     expect(screen.getByText("Asientos")).toBeTruthy();
     expect(screen.getByText("Viaje publicado")).toBeTruthy();
@@ -81,13 +97,13 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("button", { name: "Cancelar publicación" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Editar viaje" })).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/me/bookings",
+      apiUrl("/api/me/bookings"),
       expect.objectContaining({
         headers: { Authorization: "Bearer token-123" },
       })
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/me/rides",
+      apiUrl("/api/me/rides"),
       expect.objectContaining({
         headers: { Authorization: "Bearer token-123" },
       })
@@ -97,6 +113,19 @@ describe("ProfilePage", () => {
   it("shows empty states when there are no bookings or published rides", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).endsWith("/api/private/me")) {
+        return {
+          ok: true,
+          json: async () => ({
+            user: {
+              id: 7,
+              username: "Ada Lovelace",
+              email: "ada@uni.es",
+            },
+          }),
+        } as Response;
+      }
+
       if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
@@ -126,6 +155,19 @@ describe("ProfilePage", () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
     vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/private/me")) {
+        return {
+          ok: true,
+          json: async () => ({
+            user: {
+              id: 7,
+              username: "Ada Lovelace",
+              email: "ada@uni.es",
+            },
+          }),
+        } as Response;
+      }
+
       if (String(input).endsWith("/api/me/bookings")) {
         return {
           ok: true,
@@ -182,7 +224,7 @@ describe("ProfilePage", () => {
       expect(screen.queryByText("Leon to Madrid")).toBeNull();
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bookings/1",
+      apiUrl("/api/bookings/1"),
       expect.objectContaining({
         method: "DELETE",
         headers: { Authorization: "Bearer token-123" },

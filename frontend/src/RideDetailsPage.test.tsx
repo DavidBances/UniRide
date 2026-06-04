@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import App from "./App";
+import { apiUrl } from "./api";
 import { AUTH_TOKEN_KEY } from "./authToken";
 import RideDetailsPage from "./RideDetailsPage";
 
@@ -77,7 +79,7 @@ describe("RideDetailsPage", () => {
     expect(screen.getByText("Asientos reservados: 2")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancelar reserva" })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bookings",
+      apiUrl("/api/bookings"),
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({ Authorization: "Bearer token-123" }),
@@ -146,11 +148,46 @@ describe("RideDetailsPage", () => {
       expect(screen.getByRole("button", { name: "Reservar" })).toBeTruthy();
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bookings/99",
+      apiUrl("/api/bookings/99"),
       expect.objectContaining({
         method: "DELETE",
         headers: expect.objectContaining({ Authorization: "Bearer token-123" }),
       })
     );
+  });
+
+  it("redirects anonymous users to login when they try to reserve from details", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).endsWith("/api/rides/1")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ride: {
+              id: 1,
+              origin: "Madrid",
+              destination: "Barcelona",
+              departureDate: "2099-05-20T08:30:00Z",
+              availableSeats: 3,
+              price: 12.5,
+              status: "open",
+              driver: { username: "Ada", rating_average: 4.8 },
+            },
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch call: ${String(input)}`);
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/rides/1"]}>
+        <Routes>
+          <Route path="*" element={<App />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Inicia sesión para reservar desde esta pantalla.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ir a login" })).toBeTruthy();
   });
 });

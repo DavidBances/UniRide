@@ -6,29 +6,38 @@ import AuthPage from "./AuthPage";
 import Login from "./Login";
 import Register from "./Register";
 import App from "./App";
+import { LanguageProvider, useT } from "./i18n";
+
+function LocalizedLoginRoute() {
+  const t = useT();
+
+  return (
+    <AuthPage title={`UniRide | ${t("auth.loginTitle")}`}>
+      <Login />
+    </AuthPage>
+  );
+}
+
+function LocalizedRegisterRoute() {
+  const t = useT();
+
+  return (
+    <AuthPage title={`UniRide | ${t("auth.registerTitle")}`}>
+      <Register />
+    </AuthPage>
+  );
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <AuthPage title="UniRide | Login">
-              <Login />
-            </AuthPage>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <AuthPage title="UniRide | Register">
-              <Register />
-            </AuthPage>
-          }
-        />
-        <Route path="*" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LocalizedLoginRoute />} />
+          <Route path="/register" element={<LocalizedRegisterRoute />} />
+          <Route path="*" element={<App />} />
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
   </StrictMode>
 );

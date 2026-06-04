@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "./api";
+import { useT } from "./i18n";
 import "./Login.css";
 
 type RegisterResponse = {
@@ -8,23 +9,24 @@ type RegisterResponse = {
   message?: string;
 };
 
-function normalizeRegisterError(status: number, message?: string) {
+function normalizeRegisterError(status: number, message: string | undefined, t: ReturnType<typeof useT>) {
   if (!message) {
-    return "No se pudo completar el registro.";
+    return t("registerPage.genericError");
   }
 
   if (status === 409 && message.toLowerCase().includes("email")) {
-    return "Ese email ya está registrado.";
+    return t("registerPage.duplicateEmail");
   }
 
   if (status >= 500) {
-    return "El servidor no pudo crear la cuenta. Inténtalo de nuevo.";
+    return t("registerPage.serverError");
   }
 
   return message;
 }
 
 export default function Register() {
+  const t = useT();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,17 +44,17 @@ export default function Register() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!trimmedName || !normalizedEmail || !password) {
-      setError("Completa nombre, correo y contraseña.");
+      setError(t("registerPage.required"));
       return;
     }
 
     if (!normalizedEmail.includes("@")) {
-      setError("Correo no válido.");
+      setError(t("registerPage.invalidEmail"));
       return;
     }
 
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
+      setError(t("registerPage.shortPassword"));
       return;
     }
 
@@ -74,15 +76,15 @@ export default function Register() {
       const data = (await response.json()) as RegisterResponse;
 
       if (!response.ok) {
-        setError(normalizeRegisterError(response.status, data.error));
+        setError(normalizeRegisterError(response.status, data.error, t));
         return;
       }
 
-      const successMessage = data.message ?? "Usuario registrado correctamente.";
+      const successMessage = data.message ?? t("registerPage.success");
       setOk(successMessage);
       navigate("/login", { replace: true, state: { registerMessage: successMessage } });
     } catch {
-      setError("No se pudo conectar con el servidor.");
+      setError(t("registerPage.genericError"));
     } finally {
       setLoading(false);
     }
@@ -91,11 +93,11 @@ export default function Register() {
   return (
     <section className="auth-page">
       <form className="card auth-card auth-form" onSubmit={handleSubmit}>
-        <h1 className="text-title">Crear cuenta</h1>
+        <h1 className="text-title">{t("registerPage.title")}</h1>
 
         <div className="field">
           <label className="text-label" htmlFor="name">
-            Name
+            {t("registerPage.name")}
           </label>
           <input
             className="input"
@@ -110,7 +112,7 @@ export default function Register() {
 
         <div className="field">
           <label className="text-label" htmlFor="register-email">
-            Email
+            {t("registerPage.email")}
           </label>
           <input
             className="input"
@@ -125,7 +127,7 @@ export default function Register() {
 
         <div className="field">
           <label className="text-label" htmlFor="register-password">
-            Password
+            {t("registerPage.password")}
           </label>
           <input
             className="input"
@@ -143,7 +145,7 @@ export default function Register() {
 
         <button className="btn btn-primary auth-submit" type="submit" disabled={loading}>
           {loading && <span className="button-spinner" aria-hidden="true" />}
-          {loading ? "Registrando..." : "Registrarse"}
+          {loading ? t("registerPage.loading") : t("registerPage.submit")}
         </button>
       </form>
     </section>

@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiUrl } from "./api";
 import { getStoredToken } from "./authToken";
+import { useT } from "./i18n";
 
 type Ride = {
   id: number;
@@ -36,6 +37,8 @@ const emptyFilters: RideFilters = {
 };
 
 export default function RidesPage() {
+  const t = useT();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<RideFilters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState<RideFilters>(emptyFilters);
   const [rides, setRides] = useState<Ride[]>([]);
@@ -64,7 +67,7 @@ export default function RidesPage() {
         const data = (await response.json()) as RidesResponse;
 
         if (!response.ok) {
-          setError(data.error ?? "No se pudieron cargar los viajes.");
+          setError(data.error ?? t("rides.connectionError"));
           return;
         }
 
@@ -74,7 +77,7 @@ export default function RidesPage() {
           return;
         }
 
-        setError("No se pudo conectar con el servidor.");
+        setError(t("rides.connectionError"));
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -99,7 +102,7 @@ export default function RidesPage() {
 
   const handleReserveClick = (ride: Ride) => {
     if (!token) {
-      setError("Debes iniciar sesión para reservar.");
+      navigate("/login");
       return;
     }
     setSelectedRide(ride);
@@ -131,7 +134,7 @@ export default function RidesPage() {
       const data = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        setReservationError(data.error ?? "No se pudo hacer la reserva.");
+        setReservationError(data.error ?? t("rides.reservationError"));
         return;
       }
 
@@ -145,11 +148,11 @@ export default function RidesPage() {
             : ride
         )
       );
-      setReservationSuccess(data.message ?? "Reserva confirmada correctamente.");
+      setReservationSuccess(data.message ?? t("rides.reservationCreated"));
       setSelectedRide(null);
       setReservationError("");
     } catch {
-      setReservationError("Error de conexión al servidor.");
+      setReservationError(t("rides.connectionError"));
     } finally {
       setReservationLoading(false);
     }
@@ -160,14 +163,14 @@ export default function RidesPage() {
   return (
     <section className="w-full py-6">
       <div className="mb-6">
-        <h1 className="text-title">Rides</h1>
-        <p className="text-gray-600">Busca viajes publicados por origen, destino, fecha y plazas.</p>
+        <h1 className="text-title">{t("rides.title")}</h1>
+        <p className="text-gray-600">{t("rides.description")}</p>
       </div>
 
       <form className="mb-6 grid gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-5" onSubmit={handleSubmit}>
         <div className="field">
           <label className="text-label" htmlFor="ride-origin">
-            Origin
+            {t("rides.origin")}
           </label>
           <input
             className="input"
@@ -181,7 +184,7 @@ export default function RidesPage() {
 
         <div className="field">
           <label className="text-label" htmlFor="ride-destination">
-            Destination
+            {t("rides.destination")}
           </label>
           <input
             className="input"
@@ -195,7 +198,7 @@ export default function RidesPage() {
 
         <div className="field">
           <label className="text-label" htmlFor="ride-date">
-            Date
+            {t("rides.date")}
           </label>
           <input
             className="input"
@@ -208,7 +211,7 @@ export default function RidesPage() {
 
         <div className="field">
           <label className="text-label" htmlFor="ride-seats">
-            Seats
+            {t("rides.seats")}
           </label>
           <input
             className="input"
@@ -223,20 +226,20 @@ export default function RidesPage() {
 
         <div className="flex flex-col gap-3 self-end sm:flex-row md:flex-col">
           <button className="btn btn-primary" type="submit" disabled={loading}>
-            {loading ? "Buscando..." : "Buscar"}
+            {loading ? t("rides.searching") : t("rides.search")}
           </button>
           <button className="btn border border-gray-200 bg-white text-gray-700" type="button" onClick={resetFilters}>
-            Limpiar filtros
+            {t("rides.clearFilters")}
           </button>
         </div>
       </form>
 
       {error && <p className="message message-error mb-4">{error}</p>}
       {reservationSuccess && <p className="message message-success mb-4">{reservationSuccess}</p>}
-      {!error && hasActiveFilters && <p className="message mb-4 text-gray-600">Resultados filtrados</p>}
+      {!error && hasActiveFilters && <p className="message mb-4 text-gray-600">{t("rides.filtered")}</p>}
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Cargando viajes">
+        <div className="grid gap-4 md:grid-cols-2" aria-busy="true" aria-label={t("rides.loading")}>
           <RideCardSkeleton />
           <RideCardSkeleton />
           <RideCardSkeleton />
@@ -246,19 +249,19 @@ export default function RidesPage() {
         <div className="empty-state">
           {hasActiveFilters ? (
             <>
-              <h2 className="text-lg font-bold text-gray-950">Sin resultados</h2>
+              <h2 className="text-lg font-bold text-gray-950">{t("rides.noResults")}</h2>
               <p className="mt-2 text-sm text-gray-600">
-                No encontramos viajes para tu búsqueda. Prueba con otro origen, destino o fecha.
+                {t("rides.noResultsCopy")}
               </p>
               <button className="btn border border-gray-200 bg-white text-gray-700 mt-4" type="button" onClick={resetFilters}>
-                Limpiar filtros
+                {t("rides.noResultsReset")}
               </button>
             </>
           ) : (
             <>
-              <h2 className="text-lg font-bold text-gray-950">No hay viajes disponibles</h2>
+              <h2 className="text-lg font-bold text-gray-950">{t("rides.noRides")}</h2>
               <p className="mt-2 text-sm text-gray-600">
-                Aún no hay ningún viaje publicado. Vuelve más tarde o publica el primero tú mismo.
+                {t("rides.noRidesCopy")}
               </p>
             </>
           )}
@@ -270,25 +273,25 @@ export default function RidesPage() {
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">
-                    {ride.origin} to {ride.destination}
+                    {ride.origin} {t("rides.routeJoiner")} {ride.destination}
                   </h2>
                   <p className="text-sm text-gray-600">{formatRideDate(ride.departureDate)}</p>
                 </div>
                 <span className="rounded-md bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700">
-                  {ride.status}
+                  {t(`rides.rideStatus.${ride.status}`) ?? ride.status}
                 </span>
               </div>
               <dl className="grid grid-cols-2 gap-3 text-sm mb-4">
                 <div>
-                  <dt className="text-label">Seats</dt>
+                  <dt className="text-label">{t("rides.seatsLabel")}</dt>
                   <dd className="font-bold">{ride.availableSeats}</dd>
                 </div>
                 <div>
-                  <dt className="text-label">Price</dt>
+                  <dt className="text-label">{t("rides.price")}</dt>
                   <dd className="font-bold">{Number(ride.price).toFixed(2)} EUR</dd>
                 </div>
                 <div>
-                  <dt className="text-label">Rating</dt>
+                  <dt className="text-label">{t("rides.rating")}</dt>
                   <dd className="font-bold">{formatRating(ride.averageRating, ride.reviewCount)}</dd>
                 </div>
               </dl>
@@ -297,7 +300,7 @@ export default function RidesPage() {
                   to={`/rides/${ride.id}`}
                   className="btn border border-gray-200 bg-white text-gray-700 flex-1 text-center"
                 >
-                  Ver detalles
+                  {t("rides.viewDetails")}
                 </Link>
                 <button
                   className="btn btn-primary flex-1"
@@ -305,7 +308,7 @@ export default function RidesPage() {
                   onClick={() => handleReserveClick(ride)}
                   disabled={ride.status !== "open" || ride.availableSeats <= 0}
                 >
-                  {ride.status !== "open" ? "Completed ride" : ride.availableSeats <= 0 ? "No seats left" : "Reservar"}
+                  {ride.status !== "open" ? t("rides.completed") : ride.availableSeats <= 0 ? t("rides.noSeatsLeft") : t("rides.reserve")}
                 </button>
               </div>
             </article>
@@ -317,7 +320,7 @@ export default function RidesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="reserve-title">
           <div className="max-h-full w-full max-w-md overflow-auto rounded-lg bg-white p-6 shadow-lg">
             <h2 className="text-lg font-bold text-gray-900 mb-4">
-              <span id="reserve-title">Reservar viaje</span>
+              <span id="reserve-title">{t("rides.reserveTitle")}</span>
             </h2>
             <p className="text-sm text-gray-600 mb-4">
               {selectedRide.origin} → {selectedRide.destination}
@@ -329,7 +332,7 @@ export default function RidesPage() {
 
             <div className="mb-6">
               <label className="text-label" htmlFor="seats-input">
-                Número de pasajeros
+                {t("rides.selectedSeats")}
               </label>
               <div className="flex gap-2 mt-2">
                 <button
@@ -368,7 +371,7 @@ export default function RidesPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Asientos disponibles: {selectedRide.availableSeats}
+                {t("rides.seatsLabel")}: {selectedRide.availableSeats}
               </p>
             </div>
 
@@ -379,7 +382,7 @@ export default function RidesPage() {
                 onClick={() => setSelectedRide(null)}
                 disabled={reservationLoading}
               >
-                Cancelar
+                {t("rides.cancel")}
               </button>
               <button
                 className="btn btn-primary flex-1"
@@ -388,7 +391,7 @@ export default function RidesPage() {
                 disabled={reservationLoading}
               >
                 {reservationLoading && <span className="button-spinner" aria-hidden="true" />}
-                {reservationLoading ? "Reservando..." : "Confirmar"}
+                {reservationLoading ? t("rides.reserving") : t("rides.confirm")}
               </button>
             </div>
           </div>
