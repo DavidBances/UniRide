@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import RidesPage from "./RidesPage";
 
 describe("RidesPage", () => {
@@ -33,7 +34,11 @@ describe("RidesPage", () => {
       }),
     } as Response);
 
-    render(<RidesPage />);
+    render(
+      <MemoryRouter>
+        <RidesPage />
+      </MemoryRouter>
+    );
 
     expect(await screen.findByText("Madrid to Barcelona")).toBeTruthy();
     expect(screen.getByText("4.5/5 (2)")).toBeTruthy();
@@ -46,7 +51,11 @@ describe("RidesPage", () => {
       json: async () => ({ rides: [] }),
     } as Response);
 
-    render(<RidesPage />);
+    render(
+      <MemoryRouter>
+        <RidesPage />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("/api/rides", expect.any(Object));
@@ -71,9 +80,13 @@ describe("RidesPage", () => {
       () => new Promise<Response>(() => {}) as Promise<Response>
     );
 
-    render(<RidesPage />);
+    render(
+      <MemoryRouter>
+        <RidesPage />
+      </MemoryRouter>
+    );
 
-    expect(screen.getByText("Cargando viajes...")).toBeTruthy();
+    expect(screen.getByLabelText("Cargando viajes")).toBeTruthy();
   });
 
   it("shows an empty state when there are no rides", async () => {
@@ -82,8 +95,12 @@ describe("RidesPage", () => {
       json: async () => ({ rides: [] }),
     } as Response);
 
-    render(<RidesPage />);
+    render(
+      <MemoryRouter>
+        <RidesPage />
+      </MemoryRouter>
+    );
 
-    expect(await screen.findByText("No hay viajes disponibles.")).toBeTruthy();
+    expect(await screen.findByText("No hay viajes disponibles")).toBeTruthy();
   });
 });
