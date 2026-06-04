@@ -2,6 +2,7 @@ services:
   - type: web
     name: uniride-backend
     runtime: go
+    plan: free
     buildCommand: mkdir -p backend/bin && go build -o backend/bin/server ./backend/cmd/server
     startCommand: ./backend/bin/server
     healthCheckPath: /health
@@ -55,5 +56,6 @@ services:
 
 databases:
   - name: uniride-postgres
+    plan: free
     databaseName: uniride
     user: uniride

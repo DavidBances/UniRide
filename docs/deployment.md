@@ -4,6 +4,24 @@ This document explains how to deploy UniRide to a production-like environment an
 
 Supported / recommended platform: Render (also works on any Docker-capable host).
 
+## Deployment Topology
+
+```mermaid
+flowchart TB
+	User["Student or reviewer"]
+	Browser["Web browser"]
+	Frontend["Frontend app\nStatic site on Render"]
+	Backend["Backend API\nGo + Gin web service"]
+	Database[("PostgreSQL\nManaged or self-hosted")]
+
+	User --> Browser
+	Browser -->|HTTPS| Frontend
+	Frontend -->|REST / JSON| Backend
+	Backend -->|SQL| Database
+```
+
+The diagram shows the public frontend as a static site, the backend as a web service, and PostgreSQL as the persistence layer.
+
 ## Services to deploy
 - Backend service (Go + Gin)
 - Frontend (Vite-built static site)

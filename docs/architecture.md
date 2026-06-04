@@ -8,20 +8,20 @@ This document describes the **system architecture, technology stack, development
 
 # Table of Contents
 
-1. Introduction  
-2. Project Overview  
-3. Problem Statement  
-4. Product Vision  
-5. Technology Stack  
-6. System Architecture  
-7. Authentication  
-8. Local Development Environment  
-9. Deployment  
-10. CI/CD  
-11. Development Workflow  
-12. MVP Scope  
-13. Design Principles  
-14. Summary  
+1. Introduction
+2. Project Overview
+3. Problem Statement
+4. Product Vision
+5. Technology Stack
+6. System Architecture
+7. Authentication
+8. Local Development Environment
+9. Deployment
+10. CI/CD
+11. Development Workflow
+12. MVP Scope
+13. Design Principles
+14. Summary
 
 ---
 
@@ -182,31 +182,34 @@ The system follows a **client–server architecture**.
 flowchart LR
 
 User["User Browser"]
+Frontend["Frontend App\nReact + Vite + TypeScript"]
+Backend["Backend API\nGo + Gin"]
+Database[("PostgreSQL\nDatabase")]
 
-Frontend["Frontend
-React + Vite + TypeScript"]
-
-Backend["Backend API
-Go + Gin"]
-
-Database["PostgreSQL
-Database"]
-
-User --> Frontend
-Frontend --> Backend
-Backend --> Database
+User -->|HTTPS| Frontend
+Frontend -->|REST / JSON| Backend
+Backend -->|SQL| Database
 ```
 
 ### Components
 
-**Frontend (Client)**  
+**Frontend (Client)**
 A React application running in the user's browser.
 
-**Backend (Server)**  
+**Backend (Server)**
 A REST API written in Go that implements the business logic.
 
-**Database**  
+**Database**
 PostgreSQL database storing persistent application data.
+
+### Request Path
+
+The main request path is:
+
+1. The user interacts with the React frontend in the browser.
+2. The frontend sends API requests to the Go backend.
+3. The backend applies business rules and reads or writes data in PostgreSQL.
+4. The backend returns JSON responses to the frontend.
 
 This architecture keeps the system:
 
@@ -222,12 +225,33 @@ Authentication will use **JWT (JSON Web Tokens)**.
 
 Authentication flow:
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Database
+
+    User->>Frontend: Register or log in
+    Frontend->>Backend: POST /api/v1/auth/register or /login
+    Backend->>Database: Validate credentials / store user data
+    Database-->>Backend: User record and profile data
+    Backend-->>Frontend: JWT token + user data
+    Frontend->>Frontend: Store JWT in client state
+    User->>Frontend: Open a protected page
+    Frontend->>Backend: Request with Authorization: Bearer <token>
+    Backend->>Backend: Verify JWT in middleware
+    Backend->>Database: Read or update protected data
+    Database-->>Backend: Result
+    Backend-->>Frontend: Protected response
+```
+
 1. User registers or logs in
 2. Server validates credentials
 3. Server generates a JWT token
 4. Client sends the token in future requests
 
-Protected API endpoints require a valid token.
+Protected API endpoints require a valid token and are guarded by authentication middleware.
 
 Passwords are stored using **secure hashing**.
 

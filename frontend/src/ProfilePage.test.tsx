@@ -124,7 +124,7 @@ describe("ProfilePage", () => {
 
   it("cancels a booking from the dashboard", async () => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, "token-123");
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       if (String(input).endsWith("/api/me/bookings")) {
         return {

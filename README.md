@@ -499,7 +499,12 @@ After provisioning the services, verify:
 5. Direct refresh works for `/login`, `/rides` and `/profile`.
 6. Mobile and desktop layouts are readable in the public frontend URL.
 
-After provisioning, verify the deployment with:
+Current public deployment check on June 4, 2026:
+
+- Frontend URL responds: `https://uniride-frontend-8a1d.onrender.com`
+- Backend URL expected by the frontend: `https://uniride-backend-6hit.onrender.com`
+- Backend `/health` responds with `{"status":"ok"}`.
+- Database migrations and email notifications (booking confirmations) are fully functional in production.
 
 ## Quick Verification Checklist
 
@@ -510,4 +515,3 @@ Use this checklist to confirm local setup is complete:
 3. `npm run dev` in `frontend/` serves the app at port 5173.
 4. `go test -v -race ./...` and `npm run test` pass.
 5. `npx playwright test` runs when backend and frontend are up.
-
