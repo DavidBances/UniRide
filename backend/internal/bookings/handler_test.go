@@ -40,6 +40,34 @@ func TestCreateBookingSuccess(t *testing.T) {
 	}
 }
 
+func TestCreateBookingConsumesLastSeatAndClosesRide(t *testing.T) {
+	router, br, tr := setupRouter(t)
+	tr.ride = &domain.Trip{ID: 1, AvailableSeats: 1, Status: "open"}
+
+	req := httptest.NewRequest(http.MethodPost, "/bookings", strings.NewReader(`{"rideId":1,"seatsReserved":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+testToken(t, 42))
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+
+	if tr.ride.AvailableSeats != 0 {
+		t.Fatalf("expected available seats to be reduced to 0, got %d", tr.ride.AvailableSeats)
+	}
+
+	if tr.ride.Status != "full" {
+		t.Fatalf("expected ride status to be full, got %s", tr.ride.Status)
+	}
+
+	if len(br.bookings) != 1 {
+		t.Fatal("expected booking to be saved")
+	}
+}
+
 func TestCreateBookingInsufficientSeats(t *testing.T) {
 	router, _, tr := setupRouter(t)
 	tr.ride = &domain.Trip{ID: 1, AvailableSeats: 1, Status: "open"}

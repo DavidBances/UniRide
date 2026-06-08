@@ -4,7 +4,7 @@ CREATE TABLE ride (
     origin TEXT NOT NULL,
     destination TEXT NOT NULL,
     departure_date TIMESTAMP NOT NULL,
-    available_seats INTEGER NOT NULL CHECK (available_seats > 0),
+    available_seats INTEGER NOT NULL CHECK (available_seats >= 0),
     price_per_seat NUMERIC(10, 2) NOT NULL CHECK (price_per_seat >= 0),
     status TEXT NOT NULL DEFAULT 'open',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

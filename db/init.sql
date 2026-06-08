@@ -30,12 +30,18 @@ CREATE TABLE IF NOT EXISTS ride (
     origin TEXT NOT NULL,
     destination TEXT NOT NULL,
     departure_date TIMESTAMP NOT NULL,
-    available_seats INTEGER NOT NULL CHECK (available_seats > 0),
+    available_seats INTEGER NOT NULL CHECK (available_seats >= 0),
     price_per_seat NUMERIC(10, 2) NOT NULL CHECK (price_per_seat >= 0),
     status TEXT NOT NULL DEFAULT 'open',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE ride
+    DROP CONSTRAINT IF EXISTS ride_available_seats_check;
+
+ALTER TABLE ride
+    ADD CONSTRAINT ride_available_seats_check CHECK (available_seats >= 0);
 
 CREATE INDEX IF NOT EXISTS idx_ride_status_departure_date ON ride(status, departure_date);
 CREATE INDEX IF NOT EXISTS idx_ride_origin_lower ON ride(LOWER(origin));

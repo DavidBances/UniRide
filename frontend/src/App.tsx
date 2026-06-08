@@ -19,7 +19,7 @@ function App() {
 
   useEffect(() => {
     if (currentPath.startsWith("/rides/") && currentPath.length > 7) {
-      document.title = `${t("appName")} | Ride Details`;
+      document.title = `${t("appName")} | ${t("rideDetails.pageTitle")}`;
     } else {
       document.title = getPageTitle(currentPath, t);
     }
