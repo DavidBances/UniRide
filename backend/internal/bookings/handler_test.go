@@ -230,6 +230,7 @@ func (r *fakeUserRepository) GetByID(ctx context.Context, id int64) (users.User,
 	return users.User{}, users.ErrUserNotFound
 }
 
+//nolint:unparam
 func testToken(t *testing.T, userID int64) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"user_id": userID, "exp": time.Now().Add(time.Hour).Unix()})

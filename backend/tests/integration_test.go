@@ -205,7 +205,9 @@ func TestBusinessFlows(t *testing.T) {
 	}
 
 	var createRideResp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &createRideResp)
+	if err := json.Unmarshal(w.Body.Bytes(), &createRideResp); err != nil {
+		t.Fatalf("failed to unmarshal create ride response: %v", err)
+	}
 	rideMap := createRideResp["ride"].(map[string]any)
 	rideID := int64(rideMap["ID"].(float64))
 
@@ -236,7 +238,9 @@ func TestBusinessFlows(t *testing.T) {
 	}
 
 	var createBookResp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &createBookResp)
+	if err := json.Unmarshal(w.Body.Bytes(), &createBookResp); err != nil {
+		t.Fatalf("failed to unmarshal create booking response: %v", err)
+	}
 	bookMap := createBookResp["booking"].(map[string]any)
 	bookingID := int64(bookMap["id"].(float64))
 

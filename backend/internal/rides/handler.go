@@ -26,56 +26,25 @@ var (
 	errInvalidRideID    = errors.New("invalid ride id")
 )
 
-type createRideRequest struct {
+type baseRideRequest struct {
 	Origin         string   `json:"origin"`
 	Destination    string   `json:"destination"`
 	DepartureDate  string   `json:"departureDate"`
 	AvailableSeats int      `json:"availableSeats"`
 	Price          *float64 `json:"price"`
 	PricePerSeat   *float64 `json:"pricePerSeat"`
+}
+
+type createRideRequest struct {
+	baseRideRequest
 }
 
 type updateRideRequest struct {
-	Origin         string   `json:"origin"`
-	Destination    string   `json:"destination"`
-	DepartureDate  string   `json:"departureDate"`
-	AvailableSeats int      `json:"availableSeats"`
-	Price          *float64 `json:"price"`
-	PricePerSeat   *float64 `json:"pricePerSeat"`
-}
-
-// validate checks if the ride update request is valid and returns the parsed departure date.
-func (req *updateRideRequest) validate() (time.Time, error) {
-	if strings.TrimSpace(req.Origin) == "" || strings.TrimSpace(req.Destination) == "" || strings.TrimSpace(req.DepartureDate) == "" {
-		return time.Time{}, errInvalidRideInput
-	}
-
-	if req.AvailableSeats <= 0 {
-		return time.Time{}, errInvalidSeats
-	}
-
-	price := req.Price
-	if price == nil {
-		price = req.PricePerSeat
-	}
-	if price != nil && *price < 0 {
-		return time.Time{}, errInvalidPrice
-	}
-
-	parsedDate, err := time.Parse(time.RFC3339, req.DepartureDate)
-	if err != nil {
-		return time.Time{}, errInvalidRideDate
-	}
-
-	if parsedDate.Before(time.Now()) {
-		return time.Time{}, errPastRideDate
-	}
-
-	return parsedDate, nil
+	baseRideRequest
 }
 
 // validate checks if the ride request is valid and returns the parsed departure date.
-func (req *createRideRequest) validate() (time.Time, error) {
+func (req *baseRideRequest) validate() (time.Time, error) {
 	if strings.TrimSpace(req.Origin) == "" || strings.TrimSpace(req.Destination) == "" || strings.TrimSpace(req.DepartureDate) == "" {
 		return time.Time{}, errInvalidRideInput
 	}

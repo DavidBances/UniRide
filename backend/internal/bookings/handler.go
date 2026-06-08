@@ -145,7 +145,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	if h.userRepository != nil {
 		if _, err := h.userRepository.GetByID(ctx, userID); err != nil {
-			if err == users.ErrUserNotFound {
+			if errors.Is(err, users.ErrUserNotFound) {
 				httpx.Error(c, http.StatusUnauthorized, "authenticated_user_not_found", "authenticated user not found", nil)
 				return
 			}
@@ -202,25 +202,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	h.logger.Info("booking created", "booking_id", booking.ID, "user_id", userID, "ride_id", booking.RideID, "seats", booking.SeatsReserved, "request_id", c.GetString("requestID"))
 
-	// Extraer email del JWT y enviar notificación de forma asíncrona
-	authHeader := c.GetHeader("Authorization")
-	go func(header, origin, dest string, seats int, price float64) {
-		tokenString := strings.TrimPrefix(header, "Bearer ")
-		var userEmail string
-		if token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{}); err == nil {
-			if claims, ok := token.Claims.(jwt.MapClaims); ok {
-				if email, ok := claims["email"].(string); ok {
-					userEmail = email
-				}
-			}
-		}
-
-		if userEmail != "" {
-			subject := "Reserva confirmada - UniRide"
-			body := fmt.Sprintf("Hola,\n\nTu reserva para el viaje de %s a %s ha sido confirmada.\nAsientos reservados: %d\nPrecio total: %.2f EUR\n\n¡Buen viaje!", origin, dest, seats, price*float64(seats))
-			sendEmailSafe(userEmail, subject, body, h.logger)
-		}
-	}(authHeader, ride.Origin, ride.Destination, req.SeatsReserved, ride.PricePerSeat)
+	h.sendConfirmationEmail(c.GetHeader("Authorization"), ride.Origin, ride.Destination, req.SeatsReserved, ride.PricePerSeat)
 
 	httpx.Success(c, http.StatusCreated, gin.H{
 		"message": "booking created successfully",
@@ -232,6 +214,32 @@ func (h *Handler) Create(c *gin.Context) {
 			"createdAt":     booking.CreatedAt,
 		},
 	})
+}
+
+// sendConfirmationEmail
+func (h *Handler) sendConfirmationEmail(authHeader, origin, dest string, seats int, price float64) {
+	go func() {
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+		if err != nil {
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			return
+		}
+
+		userEmail, ok := claims["email"].(string)
+		if !ok || userEmail == "" {
+			return
+		}
+
+		subject := "Reserva confirmada - UniRide"
+		body := fmt.Sprintf("Hola,\n\nTu reserva para el viaje de %s a %s ha sido confirmada.\nAsientos reservados: %d\nPrecio total: %.2f EUR\n\n¡Buen viaje!", origin, dest, seats, price*float64(seats))
+		sendEmailSafe(userEmail, subject, body, h.logger)
+	}()
 }
 
 // Delete handles booking deletion.

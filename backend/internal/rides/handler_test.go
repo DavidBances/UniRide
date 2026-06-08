@@ -269,6 +269,7 @@ func setupRideRouter(t *testing.T) (*gin.Engine, *fakeTripRepository) {
 	return router, repo
 }
 
+//nolint:unparam
 func testToken(t *testing.T, userID int64) string {
 	t.Helper()
 
